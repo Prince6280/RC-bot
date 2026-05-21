@@ -38,7 +38,7 @@ ydl_opts = {
     'skip_download': True,
     'nocheckcertificate': True,
     'default_search': 'auto',
-    'source_address': '0.0.0.0' # Helps bypass some IP blocks
+    'source_address': '0.0.0.0' 
 }
 
 ffmpeg_options = {
@@ -50,11 +50,11 @@ ffmpeg_options = {
 async def on_ready():
     print(f"Logged in as {bot.user.name} - System Online on Cloud!")
 
-# --- 🎵 ULTRA STABLE PLAY COMMAND (USING YT-DLP) ---
+# --- 🎵 ULTRA STABLE PLAY COMMAND (USING SOUNDCLOUD BYPASS) ---
 @bot.command()
 async def play(ctx, *, query: str = None):
     if not query:
-        return await ctx.send("❌ Please provide a song name! Example: `>play tum hi ho`")
+        return await ctx.send("❌ Please provide a song name! Example: `>play moves shubh`")
     if not ctx.author.voice:
         return await ctx.send("❌ Please join a voice channel first! 🎧")
 
@@ -70,17 +70,17 @@ async def play(ctx, *, query: str = None):
     voice_client = ctx.voice_client
 
     try:
-        await ctx.send("🎵 Searching and extracting audio...")
+        await ctx.send("🎵 Searching via Secure SoundCloud Gateway...")
 
-        # yt-dlp का उपयोग करके डायरेक्ट ऑडियो निकालना (403 बाईपास)
+        # 403 Error Bypass: YouTube की जगह SoundCloud से ऑडियो निकालेंगे
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # ytsearch: लगाकर सर्च करना
-            info = ydl.extract_info(f"ytsearch:{query}", download=False)
+            # ytsearch: की जगह scsearch: लगा दिया है
+            info = ydl.extract_info(f"scsearch:{query}", download=False)
             
             if 'entries' in info and len(info['entries']) > 0:
-                info = info['entries'][0]  # पहली वीडियो सेलेक्ट करना
+                info = info['entries'][0]
             else:
-                return await ctx.send("❌ Track not found. Try another name.")
+                return await ctx.send("❌ Track not found on SoundCloud. Try another name.")
 
             audio_url = info['url']
             title = info.get('title', 'Unknown Title')
@@ -88,7 +88,6 @@ async def play(ctx, *, query: str = None):
         if voice_client.is_playing():
             voice_client.stop()
 
-        # 3. Play the clean audio stream
         source = discord.FFmpegPCMAudio(audio_url, executable="./ffmpeg", **ffmpeg_options)
         source = discord.PCMVolumeTransformer(source)
         voice_client.play(source)
