@@ -6,19 +6,8 @@ import yt_dlp
 import urllib.request
 import re
 import json
+import imageio_ffmpeg  # <--- Naya aur modern FFmpeg package
 from keep_alive import keep_alive  
-
-# --- AUTO FFMPEG DOWNLOADER FOR CLOUD ---
-if not os.path.exists("./ffmpeg"):
-    print("Downloading light FFmpeg binary...")
-    import zipfile
-    url = "https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.1/ffmpeg-4.1-linux-64.zip"
-    urllib.request.urlretrieve(url, "ffmpeg.zip")
-    with zipfile.ZipFile("ffmpeg.zip", "r") as zip_ref:
-        zip_ref.extractall(".")
-    os.chmod("./ffmpeg", 0o755)
-    os.remove("ffmpeg.zip")
-    print("FFmpeg setup completed successfully!")
 
 # --- BOT CONFIGURATION ---
 intents = discord.Intents.default()
@@ -50,7 +39,7 @@ ffmpeg_options = {
 async def on_ready():
     print(f"Logged in as {bot.user.name} - System Online on Cloud!")
 
-# --- 🎵 ULTRA STABLE PLAY COMMAND (USING SOUNDCLOUD BYPASS) ---
+# --- 🎵 ULTRA STABLE PLAY COMMAND ---
 @bot.command()
 async def play(ctx, *, query: str = None):
     if not query:
@@ -72,9 +61,7 @@ async def play(ctx, *, query: str = None):
     try:
         await ctx.send("🎵 Searching via Secure SoundCloud Gateway...")
 
-        # 403 Error Bypass: YouTube की जगह SoundCloud से ऑडियो निकालेंगे
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # ytsearch: की जगह scsearch: लगा दिया है
             info = ydl.extract_info(f"scsearch:{query}", download=False)
             
             if 'entries' in info and len(info['entries']) > 0:
@@ -88,7 +75,10 @@ async def play(ctx, *, query: str = None):
         if voice_client.is_playing():
             voice_client.stop()
 
-        source = discord.FFmpegPCMAudio(audio_url, executable="./ffmpeg", **ffmpeg_options)
+        # --- YAHAN NAYA FFMPEG ENGINE LAGA HAI ---
+        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+        
+        source = discord.FFmpegPCMAudio(audio_url, executable=ffmpeg_path, **ffmpeg_options)
         source = discord.PCMVolumeTransformer(source)
         voice_client.play(source)
 
