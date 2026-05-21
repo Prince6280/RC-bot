@@ -43,23 +43,37 @@ intents.members = True
 
 bot = commands.Bot(command_prefix=">", intents=intents)
 
-# 🌟 PREMIUM USERS & QUEUE SYSTEM
+# 🌟 PREMIUM USERS, QUEUE & EFFECTS SYSTEM
 PREMIUM_USERS = [149017434425665333]
-SECRET_PREMIUM_KEY = "ROADTO3K"  # Is key ko use karke log premium claim karenge
-music_queues = {} # Har server ki apni alag line (queue) hogi
+SECRET_PREMIUM_KEY = "ROADTO3K"  
+music_queues = {} 
+active_effects = {} # Naya system: Har server ka apna audio effect
 
-ffmpeg_options = {
-    'options': '-vn -b:a 64k'
-}
+# --- 🎛️ DYNAMIC AUDIO FILTERS LOGIC ---
+def get_audio_options(guild_id):
+    effect = active_effects.get(guild_id, "normal")
+    base_options = '-vn -b:a 64k'
+    
+    if effect == "bass":
+        # Hardcore Bass Boost
+        base_options += ' -af "bass=g=15,dynaudnorm=f=200"' 
+    elif effect == "8d":
+        # 8D Surround Audio Panning
+        base_options += ' -af "apulsator=hz=0.09"'
+    elif effect == "nightcore":
+        # Fast & High Pitch
+        base_options += ' -af "asetrate=44100*1.25,atempo=1.25"'
+        
+    return {'options': base_options}
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user.name} - System Online on Cloud!")
+    print(f"Logged in as {bot.user.name} - DJ System Online!")
 
-# --- 🎵 CORE MUSIC SYSTEM (QUEUE, BANNER & AUTO-PLAY) ---
+# --- 🎵 CORE MUSIC SYSTEM ---
 async def play_next(ctx):
     if ctx.guild.id in music_queues and len(music_queues[ctx.guild.id]) > 0:
-        song = music_queues[ctx.guild.id].pop(0) # Queue me se pehla gana nikala
+        song = music_queues[ctx.guild.id].pop(0) 
         file_name = f"audio_{ctx.guild.id}"
         
         if os.path.exists(file_name):
@@ -67,28 +81,34 @@ async def play_next(ctx):
             except: pass
 
         ydl_opts_dl = {'format': 'bestaudio/best', 'outtmpl': file_name, 'quiet': True}
-        
-        msg = await ctx.send(f"⏳ **Downloading track... (Just 2-3 seconds)**")
+        msg = await ctx.send(f"⏳ **Downloading track for best quality...**")
         
         try:
             with yt_dlp.YoutubeDL(ydl_opts_dl) as ydl:
                 ydl.extract_info(song['webpage_url'], download=True)
                 
-            # Gana khatam hone ke baad auto-next play karne ka logic
             def after_play(error):
                 coro = play_next(ctx)
                 fut = asyncio.run_coroutine_threadsafe(coro, bot.loop)
                 try: fut.result()
                 except: pass
 
-            source = discord.FFmpegPCMAudio(file_name, executable="./ffmpeg", **ffmpeg_options)
+            # Yahan dynamic effects apply ho rahe hain
+            audio_opts = get_audio_options(ctx.guild.id)
+            source = discord.FFmpegPCMAudio(file_name, executable="./ffmpeg", **audio_opts)
             source = discord.PCMVolumeTransformer(source)
             ctx.voice_client.play(source, after=after_play)
             
-            # --- MUSIC BANNER (THUMBNAIL) ---
+            # --- MUSIC BANNER ---
             embed = discord.Embed(title="🎵 Now Playing", description=f"**{song['title']}**", color=discord.Color.green())
             if song['thumbnail']:
-                embed.set_image(url=song['thumbnail']) # Yahan banner add ho raha hai
+                embed.set_image(url=song['thumbnail']) 
+            
+            # Agar koi effect laga hai, to banner me show karo
+            current_effect = active_effects.get(ctx.guild.id, "normal").upper()
+            if current_effect != "NORMAL":
+                embed.add_field(name="🎛️ Active Effect", value=f"**{current_effect}**", inline=False)
+                
             embed.set_footer(text="Vibing for the Road To 3K Music Fest at Royal Club!")
             
             await msg.delete()
@@ -96,9 +116,9 @@ async def play_next(ctx):
             
         except Exception as e:
             await ctx.send(f"❌ Error playing next track: `{e}`")
-            await play_next(ctx) # Agar ek me error aaye to agla try karo
+            await play_next(ctx) 
     else:
-        await ctx.send("🎶 Queue is empty! Ready for the next track.")
+        await ctx.send("🎶 Queue is empty! DJ needs more tracks.")
 
 @bot.command()
 async def play(ctx, *, query: str = None):
@@ -111,7 +131,6 @@ async def play(ctx, *, query: str = None):
 
     await ctx.send("🔍 **Searching track...**")
     
-    # Sirf details search karna (jaldi add karne ke liye)
     ydl_opts_search = {'format': 'bestaudio', 'quiet': True, 'noplaylist': True}
     with yt_dlp.YoutubeDL(ydl_opts_search) as ydl:
         info = ydl.extract_info(f"scsearch:{query}", download=False)
@@ -126,12 +145,10 @@ async def play(ctx, *, query: str = None):
             'webpage_url': info.get('webpage_url', info.get('url'))
         }
 
-    # Gane ko Line (Queue) me lagana
     if ctx.guild.id not in music_queues:
         music_queues[ctx.guild.id] = []
     music_queues[ctx.guild.id].append(song_data)
     
-    # Agar bot pehle se kuch nahi gaa raha, to music start karo
     if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
         await play_next(ctx)
     else:
@@ -143,12 +160,12 @@ async def play(ctx, *, query: str = None):
 @bot.command()
 async def skip(ctx):
     if ctx.voice_client and ctx.voice_client.is_playing():
-        ctx.voice_client.stop() # Stop karte hi auto-next trigger ho jayega
+        ctx.voice_client.stop() 
         await ctx.send("⏭️ **Song Skipped!** Playing next in queue...")
     else:
-        await ctx.send("❌ No music is playing right now to skip.")
+        await ctx.send("❌ No music is playing right now.")
 
-# --- 👑 PREMIUM CLAIM COMMAND ---
+# --- 👑 PREMIUM & EFFECTS COMMANDS ---
 @bot.command()
 async def claim_premium(ctx, key: str = None):
     if ctx.author.id in PREMIUM_USERS:
@@ -156,17 +173,44 @@ async def claim_premium(ctx, key: str = None):
         
     if key == SECRET_PREMIUM_KEY:
         PREMIUM_USERS.append(ctx.author.id)
-        embed = discord.Embed(title="🎉 Premium Claimed!", description="**Welcome to the VIP Lounge!**\nYou now have access to exclusive commands like `>volume`.", color=discord.Color.gold())
-        embed.set_footer(text="See you at the Road To 3K Music Fest!")
+        embed = discord.Embed(title="🎉 Premium VIP Claimed!", description="**Welcome to the VIP Lounge!**\nYou now have access to exclusive DJ Commands:\n`>volume`, `>bass`, `>8d`, `>nightcore`, `>normal`", color=discord.Color.gold())
+        embed.set_footer(text="Ready for Road To 3K Music Fest!")
         await ctx.send(embed=embed)
     else:
-        await ctx.send("❌ **Invalid Key!** Ask the admin for the secret premium key.")
+        await ctx.send("❌ **Invalid Key!** Use `>claim_premium ROADTO3K`")
 
-# --- 🔊 VOLUME COMMAND (PREMIUM ONLY) ---
+@bot.command()
+async def bass(ctx):
+    if ctx.author.id not in PREMIUM_USERS: return await ctx.send("❌ **VIP Only!** Claim premium first.")
+    active_effects[ctx.guild.id] = "bass"
+    await ctx.send("🔊 **Extreme Bass Boost Activated!** (It will apply to the next song or when you type `>skip`) 🎸")
+
+@bot.command()
+async def nightcore(ctx):
+    if ctx.author.id not in PREMIUM_USERS: return await ctx.send("❌ **VIP Only!** Claim premium first.")
+    active_effects[ctx.guild.id] = "nightcore"
+    await ctx.send("✨ **Nightcore Mode Activated!** (It will apply to the next song or when you type `>skip`) 🚀")
+
+@bot.command()
+async def ad(ctx): # Function name cant be 8d in python, so using ad for 8D command mapping
+    pass # Defined below properly as an alias
+
+@bot.command(name="8d")
+async def eight_d(ctx):
+    if ctx.author.id not in PREMIUM_USERS: return await ctx.send("❌ **VIP Only!** Claim premium first.")
+    active_effects[ctx.guild.id] = "8d"
+    await ctx.send("🎧 **8D Surround Audio Activated!** (It will apply to the next song or when you type `>skip`) 🌀")
+
+@bot.command()
+async def normal(ctx):
+    if ctx.author.id not in PREMIUM_USERS: return await ctx.send("❌ **VIP Only!** Claim premium first.")
+    active_effects[ctx.guild.id] = "normal"
+    await ctx.send("✅ Audio effects reset to **Normal**. (Will apply to the next song)")
+
+# --- 🔊 VOLUME COMMAND ---
 @bot.command()
 async def volume(ctx, vol: int):
-    if ctx.author.id not in PREMIUM_USERS:
-        return await ctx.send("❌ **Premium Only:** Claim premium using `>claim_premium` first! ⭐")
+    if ctx.author.id not in PREMIUM_USERS: return await ctx.send("❌ **VIP Only!** Claim premium first.")
     if not ctx.voice_client: return await ctx.send("❌ I am not in a voice channel.")
     if not 0 <= vol <= 100: return await ctx.send("❌ Volume must be between 0 and 100.")
     ctx.voice_client.source.volume = vol / 100
@@ -176,13 +220,13 @@ async def volume(ctx, vol: int):
 @bot.command()
 async def stop(ctx):
     if ctx.voice_client and ctx.voice_client.is_playing():
-        music_queues[ctx.guild.id] = [] # Queue clear kardi
+        music_queues[ctx.guild.id] = [] 
         ctx.voice_client.stop()
         await ctx.send("🛑 Music stopped and queue cleared.")
     else:
         await ctx.send("❌ No music is playing right now.")
 
-# --- 🛡 MODERATION & ANTI-NUKE ---
+# --- 🛡 MODERATION ---
 @bot.command()
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, reason=None):
@@ -194,24 +238,6 @@ async def kick(ctx, member: discord.Member, *, reason=None):
 async def ban(ctx, member: discord.Member, *, reason=None):
     await member.ban(reason=reason)
     await ctx.send(f"✅ {member.mention} has been banned. Reason: {reason}")
-
-@bot.event
-async def on_guild_channel_delete(channel):
-    async for entry in channel.guild.audit_logs(limit=1, action=discord.AuditLogAction.channel_delete):
-        user = entry.user
-        if user.id not in PREMIUM_USERS and user.id != channel.guild.owner_id:
-            try:
-                await channel.guild.ban(user, reason="Anti-Nuke: Unauthorised Channel Deletion")
-                await channel.guild.create_text_channel(name=channel.name, category=channel.category)
-            except Exception: pass
-
-@bot.event
-async def on_guild_role_delete(role):
-    async for entry in role.guild.audit_logs(limit=1, action=discord.AuditLogAction.role_delete):
-        user = entry.user
-        if user.id not in PREMIUM_USERS and user.id != role.guild.owner_id:
-            try: await role.guild.ban(user, reason="Anti-Nuke: Unauthorised Role Deletion")
-            except Exception: pass
 
 keep_alive()  
 bot.run(os.getenv('DISCORD_TOKEN'))
