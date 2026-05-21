@@ -1,4 +1,5 @@
-discord.py==2.3.2
-yt-dlp
+discord.py[voice]
 PyNaCl
-flask
+yt-dlp
+audioop-lts
+asyncio
