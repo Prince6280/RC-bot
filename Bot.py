@@ -5,20 +5,41 @@ import discord
 from discord.ext import commands
 import yt_dlp
 import urllib.request
+import tarfile
+import platform
 import re
 import json
 from keep_alive import keep_alive  
 
-# --- AUTO FFMPEG DOWNLOADER (STABLE RENDER FIX) ---
+# --- SMART FFMPEG DOWNLOADER (FIX FOR -11 ARCHITECTURE ERROR) ---
 if not os.path.exists("./ffmpeg"):
-    print("Downloading stable Linux FFmpeg binary...")
-    # Direct static binary download (No extraction needed, bypasses -11 error)
-    url = "https://github.com/eugeneware/ffmpeg-static/releases/download/b4.4/linux-x64"
-    urllib.request.urlretrieve(url, "./ffmpeg")
-    # File ko execute (run) karne ki permission dena
+    arch = platform.machine().lower()
+    print(f"Detected System Architecture: {arch}")
+    
+    # Render ke ARM ya Intel processor ke hisaab se sahi file chunna
+    if "aarch64" in arch or "arm" in arch:
+        url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz"
+    else:
+        url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+        
+    print(f"Downloading official static FFmpeg for {arch}...")
+    urllib.request.urlretrieve(url, "ffmpeg.tar.xz")
+    
+    print("Extracting FFmpeg binary...")
+    with tarfile.open("ffmpeg.tar.xz") as tar:
+        for member in tar.getmembers():
+            # Sirf asli ffmpeg binary file ko nikalna hai
+            if member.isfile() and member.name.endswith("/ffmpeg"):
+                f_in = tar.extractfile(member)
+                with open("./ffmpeg", "wb") as f_out:
+                    f_out.write(f_in.read())
+                break
+                
+    # File ko run karne ki permission dena
     st = os.stat("./ffmpeg")
     os.chmod("./ffmpeg", st.st_mode | stat.S_IEXEC)
-    print("FFmpeg setup completed successfully!")
+    os.remove("ffmpeg.tar.xz")
+    print("FFmpeg setup completed successfully! No more -11 errors.")
 
 # --- BOT CONFIGURATION ---
 intents = discord.Intents.default()
@@ -86,7 +107,7 @@ async def play(ctx, *, query: str = None):
         if voice_client.is_playing():
             voice_client.stop()
         
-        # Yahan hum apna naya aur stable ./ffmpeg use kar rahe hain
+        # Exact sahi architecture wali file use ho rahi hai
         source = discord.FFmpegPCMAudio(audio_url, executable="./ffmpeg", **ffmpeg_options)
         source = discord.PCMVolumeTransformer(source)
         voice_client.play(source)
