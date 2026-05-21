@@ -184,7 +184,7 @@ def get_audio_options(guild_id):
     elif effect == "nightcore": base_options += ' -af "asetrate=44100*1.25,atempo=1.25"'
     return {'options': base_options}
 
-# --- 🎵 YOUTUBE BYPASS MUSIC SYSTEM (LATEST SONGS SUPPORT) ---
+# --- 🎵 ULTRA STABLE SOUNDCLOUD MUSIC SYSTEM (ANTI-FREEZE) ---
 async def play_next(ctx):
     if ctx.guild.id in music_queues and len(music_queues[ctx.guild.id]) > 0:
         song = music_queues[ctx.guild.id].pop(0) 
@@ -193,16 +193,9 @@ async def play_next(ctx):
             try: os.remove(file_name)
             except: pass
 
-        # 🔥 YAHAN CHANGE KIYA HAI: YouTube ke anti-bot ko bypass karne ke liye Android Client spoofing
-        ydl_opts_dl = {
-            'format': 'bestaudio/best', 
-            'outtmpl': file_name, 
-            'quiet': True,
-            'nocheckcertificate': True,
-            'extractor_args': {'youtube': ['player_client=android,web']} 
-        }
-        
-        msg = await ctx.send(f"⏳ **Downloading latest track... (Please wait)**")
+        # Wapas Stable SoundCloud Engine par shift kiya taaki 403 error na aaye
+        ydl_opts_dl = {'format': 'bestaudio/best', 'outtmpl': file_name, 'quiet': True}
+        msg = await ctx.send(f"⏳ **Downloading track from Secure Gateway...**")
         
         def download_song():
             with yt_dlp.YoutubeDL(ydl_opts_dl) as ydl: 
@@ -232,7 +225,7 @@ async def play_next(ctx):
             await msg.delete()
             await ctx.send(embed=embed)
         except Exception as e:
-            await ctx.send(f"❌ Playback Error. YouTube might be blocking the stream. Try again!")
+            await ctx.send(f"❌ Error playing track. Network might be slow.")
             await play_next(ctx) 
     else:
         await ctx.send("🎶 Queue is empty! DJ needs more tracks.")
@@ -246,28 +239,21 @@ async def play(ctx, *, query: str = None):
         try: await ctx.author.voice.channel.connect(timeout=60.0)
         except: return await ctx.send("❌ Failed to connect to the voice channel.")
 
-    await ctx.send("🔍 **Searching YouTube for latest tracks...**")
+    await ctx.send("🔍 **Searching secure database...**")
     
-    # 🔥 YAHAN CHANGE KIYA HAI: Wapas scsearch ki jagah ytsearch lagaya hai with Bypass
-    ydl_opts_search = {
-        'format': 'bestaudio', 
-        'quiet': True, 
-        'noplaylist': True,
-        'nocheckcertificate': True,
-        'extractor_args': {'youtube': ['player_client=android,web']} 
-    }
+    ydl_opts_search = {'format': 'bestaudio', 'quiet': True, 'noplaylist': True}
     
     def search_song():
         with yt_dlp.YoutubeDL(ydl_opts_search) as ydl:
-            # ytsearch laga diya taaki ekdum naye gaane milen
-            return ydl.extract_info(f"ytsearch:{query}", download=False)
+            # Wapas scsearch lagaya hai taaki YouTube IP Block na kare
+            return ydl.extract_info(f"scsearch:{query}", download=False)
             
     try:
         info = await asyncio.to_thread(search_song)
         if 'entries' in info and len(info['entries']) > 0: 
             info = info['entries'][0]
         else: 
-            return await ctx.send("❌ Track not found on YouTube.")
+            return await ctx.send("❌ Track not found. Try adding the artist name (e.g. `>play moves shubh`).")
             
         song_data = {
             'title': info.get('title', 'Unknown Title'),
@@ -286,7 +272,7 @@ async def play(ctx, *, query: str = None):
             await ctx.send(embed=embed)
             
     except Exception as e:
-        await ctx.send("❌ Search failed! YouTube might be rate-limiting. Try again in a few seconds.")
+        await ctx.send("❌ Search failed due to network issue. Try again!")
 
 @bot.command()
 async def skip(ctx):
