@@ -1,13 +1,24 @@
 import asyncio
 import os
+import stat
 import discord
 from discord.ext import commands
 import yt_dlp
 import urllib.request
 import re
 import json
-import imageio_ffmpeg  
 from keep_alive import keep_alive  
+
+# --- AUTO FFMPEG DOWNLOADER (STABLE RENDER FIX) ---
+if not os.path.exists("./ffmpeg"):
+    print("Downloading stable Linux FFmpeg binary...")
+    # Direct static binary download (No extraction needed, bypasses -11 error)
+    url = "https://github.com/eugeneware/ffmpeg-static/releases/download/b4.4/linux-x64"
+    urllib.request.urlretrieve(url, "./ffmpeg")
+    # File ko execute (run) karne ki permission dena
+    st = os.stat("./ffmpeg")
+    os.chmod("./ffmpeg", st.st_mode | stat.S_IEXEC)
+    print("FFmpeg setup completed successfully!")
 
 # --- BOT CONFIGURATION ---
 intents = discord.Intents.default()
@@ -30,7 +41,6 @@ ydl_opts = {
     'source_address': '0.0.0.0' 
 }
 
-# --- YAHAN CHANGE KIYA HAI (verify_hostname hata diya) ---
 ffmpeg_options = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn -b:a 64k'
@@ -75,10 +85,9 @@ async def play(ctx, *, query: str = None):
 
         if voice_client.is_playing():
             voice_client.stop()
-
-        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
         
-        source = discord.FFmpegPCMAudio(audio_url, executable=ffmpeg_path, **ffmpeg_options)
+        # Yahan hum apna naya aur stable ./ffmpeg use kar rahe hain
+        source = discord.FFmpegPCMAudio(audio_url, executable="./ffmpeg", **ffmpeg_options)
         source = discord.PCMVolumeTransformer(source)
         voice_client.play(source)
 
