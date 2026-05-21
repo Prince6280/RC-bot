@@ -1,5 +1,4 @@
 discord.py[voice]
 PyNaCl
 yt-dlp
-audioop-lts
 asyncio
