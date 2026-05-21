@@ -57,8 +57,11 @@ async def play(ctx, *, query: str = None):
     if not ctx.author.voice:
         return await ctx.send("❌ Please join a voice channel first! 🎧")
 
-    if ctx.voice_client is None:
-        await ctx.author.voice.channel.connect()
+        if ctx.voice_client is None:
+        try:
+            await ctx.author.voice.channel.connect(timeout=60.0) 
+        except asyncio.TimeoutError:
+            return await ctx.send("❌ Connection timeout. Server is slow, try again.")
 
     voice_client = ctx.voice_client
 
