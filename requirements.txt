@@ -3,3 +3,4 @@ PyNaCl
 yt-dlp
 asyncio
 Flask
+imageio-ffmpeg
