@@ -184,7 +184,7 @@ def get_audio_options(guild_id):
     elif effect == "nightcore": base_options += ' -af "asetrate=44100*1.25,atempo=1.25"'
     return {'options': base_options}
 
-# --- 🎵 CORE MUSIC SYSTEM (ANTI-FREEZE) ---
+# --- 🎵 YOUTUBE BYPASS MUSIC SYSTEM (LATEST SONGS SUPPORT) ---
 async def play_next(ctx):
     if ctx.guild.id in music_queues and len(music_queues[ctx.guild.id]) > 0:
         song = music_queues[ctx.guild.id].pop(0) 
@@ -193,10 +193,17 @@ async def play_next(ctx):
             try: os.remove(file_name)
             except: pass
 
-        ydl_opts_dl = {'format': 'bestaudio/best', 'outtmpl': file_name, 'quiet': True}
-        msg = await ctx.send(f"⏳ **Downloading track... (Please wait)**")
+        # 🔥 YAHAN CHANGE KIYA HAI: YouTube ke anti-bot ko bypass karne ke liye Android Client spoofing
+        ydl_opts_dl = {
+            'format': 'bestaudio/best', 
+            'outtmpl': file_name, 
+            'quiet': True,
+            'nocheckcertificate': True,
+            'extractor_args': {'youtube': ['player_client=android,web']} 
+        }
         
-        # Async Download function (Bot Freeze nahi hoga)
+        msg = await ctx.send(f"⏳ **Downloading latest track... (Please wait)**")
+        
         def download_song():
             with yt_dlp.YoutubeDL(ydl_opts_dl) as ydl: 
                 ydl.extract_info(song['webpage_url'], download=True)
@@ -225,7 +232,7 @@ async def play_next(ctx):
             await msg.delete()
             await ctx.send(embed=embed)
         except Exception as e:
-            await ctx.send(f"❌ Error playing next track: `{e}`")
+            await ctx.send(f"❌ Playback Error. YouTube might be blocking the stream. Try again!")
             await play_next(ctx) 
     else:
         await ctx.send("🎶 Queue is empty! DJ needs more tracks.")
@@ -239,20 +246,28 @@ async def play(ctx, *, query: str = None):
         try: await ctx.author.voice.channel.connect(timeout=60.0)
         except: return await ctx.send("❌ Failed to connect to the voice channel.")
 
-    await ctx.send("🔍 **Searching track...**")
-    ydl_opts_search = {'format': 'bestaudio', 'quiet': True, 'noplaylist': True}
+    await ctx.send("🔍 **Searching YouTube for latest tracks...**")
     
-    # Async Search function (Taki bot hang na ho)
+    # 🔥 YAHAN CHANGE KIYA HAI: Wapas scsearch ki jagah ytsearch lagaya hai with Bypass
+    ydl_opts_search = {
+        'format': 'bestaudio', 
+        'quiet': True, 
+        'noplaylist': True,
+        'nocheckcertificate': True,
+        'extractor_args': {'youtube': ['player_client=android,web']} 
+    }
+    
     def search_song():
         with yt_dlp.YoutubeDL(ydl_opts_search) as ydl:
-            return ydl.extract_info(f"scsearch:{query}", download=False)
+            # ytsearch laga diya taaki ekdum naye gaane milen
+            return ydl.extract_info(f"ytsearch:{query}", download=False)
             
     try:
         info = await asyncio.to_thread(search_song)
         if 'entries' in info and len(info['entries']) > 0: 
             info = info['entries'][0]
         else: 
-            return await ctx.send("❌ Track not found.")
+            return await ctx.send("❌ Track not found on YouTube.")
             
         song_data = {
             'title': info.get('title', 'Unknown Title'),
@@ -271,7 +286,7 @@ async def play(ctx, *, query: str = None):
             await ctx.send(embed=embed)
             
     except Exception as e:
-        await ctx.send("❌ Search failed due to network issue. Try again!")
+        await ctx.send("❌ Search failed! YouTube might be rate-limiting. Try again in a few seconds.")
 
 @bot.command()
 async def skip(ctx):
@@ -341,7 +356,6 @@ async def volume(ctx, vol: int):
     if ctx.author.id not in PREMIUM_USERS: return await ctx.send("❌ **VIP Only!**")
     if not ctx.voice_client: return await ctx.send("❌ I am not in a voice channel.")
     
-    # Bug fix: Ensure music is playing before setting volume
     if not ctx.voice_client.source: 
         return await ctx.send("❌ DJ is not playing anything right now! Play a song first.")
         
