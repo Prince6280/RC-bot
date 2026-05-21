@@ -42,26 +42,69 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
 intents.members = True
-intents.messages = True # Anti-spam ke liye zaruri
+intents.messages = True 
 
-bot = commands.Bot(command_prefix=">", intents=intents)
+# 🔥 YAHAN CHANGE KIYA HAI: Default boring help menu ko disable kar diya
+bot = commands.Bot(command_prefix=">", intents=intents, help_command=None)
 
-# 🌟 PREMIUM & SYSTEM VARIABLES
-PREMIUM_USERS = [149017434425665333] # Aapki ID
+PREMIUM_USERS = [149017434425665333] 
 SECRET_PREMIUM_KEY = "ROADTO3K"  
 music_queues = {} 
 active_effects = {} 
-
-# Security Trackers
 spam_tracker = {}
 raid_tracker = []
 
-# --- 🛡️ ADVANCED SECURITY SYSTEM (ANTI-SPAM, ANTI-RAID, ANTI-NUKE) ---
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user.name} - DJ & Security Guardian Online!")
 
-# 1. Anti-Spam System
+# --- 🌟 ATTRACTIVE CUSTOM HELP MENU ---
+@bot.command(name="help")
+async def custom_help(ctx):
+    embed = discord.Embed(
+        title="🌟 RC Music & Guardian Bot",
+        description="Welcome to the ultimate DJ and Security bot for the **Royal Club**! Here is everything I can do for you:",
+        color=discord.Color.from_rgb(43, 45, 49) # Dark Discord Theme Color
+    )
+    
+    # Music Category
+    embed.add_field(
+        name="🎵 Music Commands", 
+        value="`>play [song]` - Play a track or add to queue\n`>skip` - Skip current track\n`>stop` - Stop music & clear queue", 
+        inline=False
+    )
+    
+    # VIP DJ Category
+    embed.add_field(
+        name="🎛️ VIP DJ Effects (Premium)", 
+        value="`>bass` - Extreme Bass Boost\n`>8d` - 8D Surround Sound\n`>nightcore` - Nightcore Mode\n`>normal` - Reset audio\n`>volume [0-100]` - Set volume\n`>claim_premium [key]` - Unlock VIP features", 
+        inline=False
+    )
+    
+    # Profile Category
+    embed.add_field(
+        name="🖼️ Profile Commands", 
+        value="`>avatar [@user]` - View high-res Avatar\n`>banner [@user]` - View user Banner", 
+        inline=False
+    )
+    
+    # Security Category
+    embed.add_field(
+        name="🛡️ Security & Admin", 
+        value="`>backup_create` - Save server layout\n`>backup_load` - Restore server layout\n`>kick / >ban` - Moderation\n\n*(🛡️ Anti-Nuke, Anti-Raid & Anti-Spam are 24/7 Active Automatically)*", 
+        inline=False
+    )
+    
+    # Thumbnail and Footer
+    if bot.user.avatar:
+        embed.set_thumbnail(url=bot.user.avatar.url)
+    embed.set_footer(text="Vibing for the Road To 3K Music Fest!", icon_url=ctx.author.display_avatar.url)
+    
+    await ctx.send(embed=embed)
+
+# --- 🛡️ ADVANCED SECURITY SYSTEM ---
 @bot.event
 async def on_message(message):
-    # Bot aur premium users ko spam check se bahar rakha hai
     if message.author.bot or message.author.id in PREMIUM_USERS or message.author.id == message.guild.owner_id:
         await bot.process_commands(message)
         return
@@ -69,14 +112,10 @@ async def on_message(message):
     author_id = message.author.id
     current_time = time.time()
 
-    if author_id not in spam_tracker:
-        spam_tracker[author_id] = []
-
-    # Pichle 5 second ke messages track karna
+    if author_id not in spam_tracker: spam_tracker[author_id] = []
     spam_tracker[author_id] = [msg_time for msg_time in spam_tracker[author_id] if current_time - msg_time < 5]
     spam_tracker[author_id].append(current_time)
 
-    # Agar 5 second me 5 se zyada message aaye to spam!
     if len(spam_tracker[author_id]) > 5:
         try:
             await message.delete()
@@ -85,26 +124,20 @@ async def on_message(message):
     
     await bot.process_commands(message)
 
-# 2. Anti-Raid System (Join Spam Protection)
 @bot.event
 async def on_member_join(member):
     current_time = time.time()
     global raid_tracker
-    
-    # Pichle 10 second me join hue log
     raid_tracker = [join_time for join_time in raid_tracker if current_time - join_time < 10]
     raid_tracker.append(current_time)
 
-    # Agar 10 second me 4 se zyada log join hue to Raid Mode On!
     if len(raid_tracker) > 4:
         try:
             await member.kick(reason="Anti-Raid: Mass joining detected!")
             channel = member.guild.system_channel
-            if channel:
-                await channel.send("🚨 **ANTI-RAID TRIGGERED:** Mass joining detected! Kicking suspicious accounts.")
+            if channel: await channel.send("🚨 **ANTI-RAID TRIGGERED:** Mass joining detected! Kicking suspicious accounts.")
         except: pass
 
-# 3. Anti-Nuke System (Enhanced)
 @bot.event
 async def on_guild_channel_delete(channel):
     async for entry in channel.guild.audit_logs(limit=1, action=discord.AuditLogAction.channel_delete):
@@ -120,8 +153,7 @@ async def on_guild_role_delete(role):
     async for entry in role.guild.audit_logs(limit=1, action=discord.AuditLogAction.role_delete):
         user = entry.user
         if user.id not in PREMIUM_USERS and user.id != role.guild.owner_id:
-            try: 
-                await role.guild.ban(user, reason="Anti-Nuke: Unauthorised Role Deletion")
+            try: await role.guild.ban(user, reason="Anti-Nuke: Unauthorised Role Deletion")
             except: pass
 
 # --- 💾 BACKUP SYSTEM ---
@@ -134,10 +166,7 @@ async def backup_create(ctx):
         "categories": [{"name": c.name} for c in ctx.guild.categories],
         "channels": [{"name": c.name, "type": str(c.type), "category": c.category.name if c.category else None} for c in ctx.guild.channels]
     }
-    
-    with open(f"backup_{ctx.guild.id}.json", "w") as f:
-        json.dump(backup_data, f, indent=4)
-        
+    with open(f"backup_{ctx.guild.id}.json", "w") as f: json.dump(backup_data, f, indent=4)
     await ctx.send("✅ **Backup Created Successfully!**\nUse `>backup_load` if your server gets nuked.")
 
 @bot.command()
@@ -145,39 +174,27 @@ async def backup_create(ctx):
 async def backup_load(ctx):
     if not os.path.exists(f"backup_{ctx.guild.id}.json"):
         return await ctx.send("❌ No backup found for this server! Create one using `>backup_create`")
-        
     await ctx.send("⚠️ **Restoring Server... This might take some time!**")
-    with open(f"backup_{ctx.guild.id}.json", "r") as f:
-        backup_data = json.load(f)
-        
-    # Sirf naye (missing) categories aur channels banayega
+    with open(f"backup_{ctx.guild.id}.json", "r") as f: backup_data = json.load(f)
     existing_categories = [c.name for c in ctx.guild.categories]
     for cat in backup_data["categories"]:
-        if cat["name"] not in existing_categories:
-            await ctx.guild.create_category(cat["name"])
-            
+        if cat["name"] not in existing_categories: await ctx.guild.create_category(cat["name"])
     await ctx.send("✅ Server Layout Restored (Basic Recovery Complete)!")
 
 # --- 🎛️ DYNAMIC AUDIO FILTERS LOGIC ---
 def get_audio_options(guild_id):
     effect = active_effects.get(guild_id, "normal")
     base_options = '-vn -b:a 64k'
-    
     if effect == "bass": base_options += ' -af "bass=g=15,dynaudnorm=f=200"' 
     elif effect == "8d": base_options += ' -af "apulsator=hz=0.09"'
     elif effect == "nightcore": base_options += ' -af "asetrate=44100*1.25,atempo=1.25"'
     return {'options': base_options}
-
-@bot.event
-async def on_ready():
-    print(f"Logged in as {bot.user.name} - DJ & Security Guardian Online!")
 
 # --- 🎵 CORE MUSIC SYSTEM ---
 async def play_next(ctx):
     if ctx.guild.id in music_queues and len(music_queues[ctx.guild.id]) > 0:
         song = music_queues[ctx.guild.id].pop(0) 
         file_name = f"audio_{ctx.guild.id}"
-        
         if os.path.exists(file_name):
             try: os.remove(file_name)
             except: pass
@@ -186,9 +203,7 @@ async def play_next(ctx):
         msg = await ctx.send(f"⏳ **Downloading track for best quality...**")
         
         try:
-            with yt_dlp.YoutubeDL(ydl_opts_dl) as ydl:
-                ydl.extract_info(song['webpage_url'], download=True)
-                
+            with yt_dlp.YoutubeDL(ydl_opts_dl) as ydl: ydl.extract_info(song['webpage_url'], download=True)
             def after_play(error):
                 coro = play_next(ctx)
                 fut = asyncio.run_coroutine_threadsafe(coro, bot.loop)
@@ -204,13 +219,11 @@ async def play_next(ctx):
             if song['thumbnail']: embed.set_image(url=song['thumbnail']) 
             
             current_effect = active_effects.get(ctx.guild.id, "normal").upper()
-            if current_effect != "NORMAL":
-                embed.add_field(name="🎛️ Active Effect", value=f"**{current_effect}**", inline=False)
+            if current_effect != "NORMAL": embed.add_field(name="🎛️ Active Effect", value=f"**{current_effect}**", inline=False)
                 
             embed.set_footer(text="Vibing for the Road To 3K Music Fest at Royal Club!")
             await msg.delete()
             await ctx.send(embed=embed)
-            
         except Exception as e:
             await ctx.send(f"❌ Error playing next track: `{e}`")
             await play_next(ctx) 
@@ -230,10 +243,8 @@ async def play(ctx, *, query: str = None):
     ydl_opts_search = {'format': 'bestaudio', 'quiet': True, 'noplaylist': True}
     with yt_dlp.YoutubeDL(ydl_opts_search) as ydl:
         info = ydl.extract_info(f"scsearch:{query}", download=False)
-        if 'entries' in info and len(info['entries']) > 0:
-            info = info['entries'][0]
-        else:
-            return await ctx.send("❌ Track not found.")
+        if 'entries' in info and len(info['entries']) > 0: info = info['entries'][0]
+        else: return await ctx.send("❌ Track not found.")
             
         song_data = {
             'title': info.get('title', 'Unknown Title'),
@@ -256,8 +267,7 @@ async def skip(ctx):
     if ctx.voice_client and ctx.voice_client.is_playing():
         ctx.voice_client.stop() 
         await ctx.send("⏭️ **Song Skipped!**")
-    else:
-        await ctx.send("❌ No music is playing right now.")
+    else: await ctx.send("❌ No music is playing right now.")
 
 # --- 🖼️ CUSTOM PROFILE COMMANDS ---
 @bot.command(aliases=['av', 'pfp'])
@@ -288,8 +298,7 @@ async def claim_premium(ctx, key: str = None):
         PREMIUM_USERS.append(ctx.author.id)
         embed = discord.Embed(title="🎉 Premium VIP Claimed!", description="**Welcome to the VIP Lounge!**", color=discord.Color.gold())
         await ctx.send(embed=embed)
-    else:
-        await ctx.send("❌ **Invalid Key!** Use `>claim_premium ROADTO3K`")
+    else: await ctx.send("❌ **Invalid Key!** Use `>claim_premium ROADTO3K`")
 
 @bot.command()
 async def bass(ctx):
@@ -329,8 +338,20 @@ async def stop(ctx):
         music_queues[ctx.guild.id] = [] 
         ctx.voice_client.stop()
         await ctx.send("🛑 Music stopped and queue cleared.")
-    else:
-        await ctx.send("❌ No music is playing right now.")
+    else: await ctx.send("❌ No music is playing right now.")
+
+# --- 🛡 MODERATION ---
+@bot.command()
+@commands.has_permissions(kick_members=True)
+async def kick(ctx, member: discord.Member, *, reason=None):
+    await member.kick(reason=reason)
+    await ctx.send(f"✅ {member.mention} has been kicked. Reason: {reason}")
+
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member: discord.Member, *, reason=None):
+    await member.ban(reason=reason)
+    await ctx.send(f"✅ {member.mention} has been banned. Reason: {reason}")
 
 keep_alive()  
 bot.run(os.getenv('DISCORD_TOKEN'))
