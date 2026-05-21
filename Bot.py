@@ -6,7 +6,7 @@ import yt_dlp
 import urllib.request
 import re
 import json
-import imageio_ffmpeg  # <--- Naya aur modern FFmpeg package
+import imageio_ffmpeg  
 from keep_alive import keep_alive  
 
 # --- BOT CONFIGURATION ---
@@ -30,8 +30,9 @@ ydl_opts = {
     'source_address': '0.0.0.0' 
 }
 
+# --- YAHAN CHANGE KIYA HAI (verify_hostname hata diya) ---
 ffmpeg_options = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -verify_hostname 0',
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn -b:a 64k'
 }
 
@@ -75,7 +76,6 @@ async def play(ctx, *, query: str = None):
         if voice_client.is_playing():
             voice_client.stop()
 
-        # --- YAHAN NAYA FFMPEG ENGINE LAGA HAI ---
         ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
         
         source = discord.FFmpegPCMAudio(audio_url, executable=ffmpeg_path, **ffmpeg_options)
