@@ -6,10 +6,9 @@ import yt_dlp
 import urllib.request
 import re
 import json
-from keep_alive import keep_alive  # <--- Render के लिए
+from keep_alive import keep_alive  
 
 # --- AUTO FFMPEG DOWNLOADER FOR CLOUD ---
-# यह रेंडर क्लाउड पर बिना किसी लिनक्स कमांड एक्सेस के ही FFmpeg सेटअप कर देगा
 if not os.path.exists("./ffmpeg"):
     print("Downloading light FFmpeg binary...")
     import zipfile
@@ -29,7 +28,7 @@ intents.members = True
 
 bot = commands.Bot(command_prefix=">", intents=intents)
 
-# 🌟 PREMIUM USERS & WHITE-LIST LIST (आपकी Discord ID)
+# 🌟 PREMIUM USERS & WHITE-LIST LIST
 PREMIUM_USERS = [149017434425665333]
 
 ydl_opts = {
@@ -37,7 +36,9 @@ ydl_opts = {
     'noplaylist': True,
     'quiet': True,
     'skip_download': True,
-    'nocheckcertificate': True
+    'nocheckcertificate': True,
+    'default_search': 'auto',
+    'source_address': '0.0.0.0' # Helps bypass some IP blocks
 }
 
 ffmpeg_options = {
@@ -49,7 +50,7 @@ ffmpeg_options = {
 async def on_ready():
     print(f"Logged in as {bot.user.name} - System Online on Cloud!")
 
-# --- 🎵 ULTRA STABLE PLAY COMMAND (BYPASSES BLOCK) ---
+# --- 🎵 ULTRA STABLE PLAY COMMAND (USING YT-DLP) ---
 @bot.command()
 async def play(ctx, *, query: str = None):
     if not query:
@@ -69,42 +70,20 @@ async def play(ctx, *, query: str = None):
     voice_client = ctx.voice_client
 
     try:
-        await ctx.send("🎵 Searching via secure cloud gateway...")
+        await ctx.send("🎵 Searching and extracting audio...")
 
-        # 1. Scraping YouTube safely without API keys
-        search_keyword = query.replace(" ", "+")
-        req = urllib.request.Request(
-            f"https://www.youtube.com/results?search_query={search_keyword}",
-            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        )
-
-        video_id = None
-        with urllib.request.urlopen(req) as response:
-            video_ids = re.findall(r"watch\?v=(\S{11})", response.read().decode())
-            if video_ids:
-                video_id = video_ids[0]
-
-        if not video_id:
-            return await ctx.send("❌ Track not found. Try another name.")
-
-        # 2. Proxy streaming via Cobalt (Bypasses all 403 / Bot Verification errors)
-        payload = {
-            "url": f"https://www.youtube.com/watch?v={video_id}",
-            "downloadMode": "audio",
-            "audioFormat": "mp3"
-        }
-
-        api_req = urllib.request.Request("https://api.cobalt.tools/api/json", method="POST")
-        api_req.add_header('Content-Type', 'application/json')
-        api_req.add_header('Accept', 'application/json')
-
-        with urllib.request.urlopen(api_req, data=json.dumps(payload).encode()) as response:
-            res_data = json.loads(response.read().decode())
-            if res_data.get("status") in ["redirect", "stream"]:
-                audio_url = res_data["url"]
-                title = res_data.get("text", query)
+        # yt-dlp का उपयोग करके डायरेक्ट ऑडियो निकालना (403 बाईपास)
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # ytsearch: लगाकर सर्च करना
+            info = ydl.extract_info(f"ytsearch:{query}", download=False)
+            
+            if 'entries' in info and len(info['entries']) > 0:
+                info = info['entries'][0]  # पहली वीडियो सेलेक्ट करना
             else:
-                return await ctx.send("❌ Streaming node busy. Please try again in a second.")
+                return await ctx.send("❌ Track not found. Try another name.")
+
+            audio_url = info['url']
+            title = info.get('title', 'Unknown Title')
 
         if voice_client.is_playing():
             voice_client.stop()
@@ -114,12 +93,11 @@ async def play(ctx, *, query: str = None):
         source = discord.PCMVolumeTransformer(source)
         voice_client.play(source)
 
-        embed = discord.Embed(title="🎵 Now Playing", description=f"**{title}**", color=discord.Color.orange())
+        embed = discord.Embed(title="🎵 Now Playing", description=f"**{title}**", color=discord.Color.green())
         embed.set_footer(text="Vibing for the Road To 3K Music Fest at Royal Club!")
         await ctx.send(embed=embed)
 
     except Exception as e:
-        # <--- यहाँ हमने बदलाव किया है ताकि एरर Discord चैट में दिखे --->
         await ctx.send(f"❌ Playback Error. Please try again.\n**Technical Error:** `{e}`")
 
 # --- 🔊 VOLUME COMMAND (PREMIUM ONLY) ---
@@ -164,7 +142,6 @@ async def on_guild_channel_delete(channel):
         if user.id not in PREMIUM_USERS and user.id != channel.guild.owner_id:
             try:
                 await channel.guild.ban(user, reason="Anti-Nuke: Unauthorised Channel Deletion")
-                # Deleted channel ko turant wapas create karna
                 await channel.guild.create_text_channel(name=channel.name, category=channel.category)
             except Exception as e:
                 print(f"Anti-Nuke Error: {e}")
@@ -179,6 +156,5 @@ async def on_guild_role_delete(role):
             except Exception as e:
                 print(f"Anti-Nuke Error: {e}")
 
-# यह टोकन को Render की environment variables से सुरक्षित तरीके से उठाएगा
 keep_alive()  
 bot.run(os.getenv('DISCORD_TOKEN'))
