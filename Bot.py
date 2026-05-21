@@ -6,9 +6,10 @@ import yt_dlp
 import urllib.request
 import re
 import json
+from keep_alive import keep_alive  # <--- Render के लिए जोड़ा गया
 
 # --- AUTO FFMPEG DOWNLOADER FOR CLOUD ---
-# यह रेंडर क्लाउड पर बिना किसी डिस्क स्पेस एरर के FFmpeg सेटअप कर देगा
+# यह रेंडर क्लाउड पर बिना किसी लिनक्स कमांड एक्सेस के ही FFmpeg सेटअप कर देगा
 if not os.path.exists("./ffmpeg"):
     print("Downloading light FFmpeg binary...")
     import zipfile
@@ -46,7 +47,7 @@ ffmpeg_options = {
 
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user.name} - System Online on Cloud!')
+    print(f"Logged in as {bot.user.name} - System Online on Cloud!")
 
 # --- 🎵 ULTRA STABLE PLAY COMMAND (BYPASSES BLOCK) ---
 @bot.command()
@@ -58,19 +59,19 @@ async def play(ctx, *, query: str = None):
 
     if ctx.voice_client is None:
         await ctx.author.voice.channel.connect()
-    
+
     voice_client = ctx.voice_client
 
     try:
         await ctx.send("🎵 Searching via secure cloud gateway...")
-        
+
         # 1. Scraping YouTube safely without API keys
         search_keyword = query.replace(" ", "+")
         req = urllib.request.Request(
             f"https://www.youtube.com/results?search_query={search_keyword}",
             headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         )
-        
+
         video_id = None
         with urllib.request.urlopen(req) as response:
             video_ids = re.findall(r"watch\?v=(\S{11})", response.read().decode())
@@ -86,11 +87,11 @@ async def play(ctx, *, query: str = None):
             "downloadMode": "audio",
             "audioFormat": "mp3"
         }
-        
+
         api_req = urllib.request.Request("https://api.cobalt.tools/api/json", method="POST")
         api_req.add_header('Content-Type', 'application/json')
         api_req.add_header('Accept', 'application/json')
-        
+
         with urllib.request.urlopen(api_req, data=json.dumps(payload).encode()) as response:
             res_data = json.loads(response.read().decode())
             if res_data.get("status") in ["redirect", "stream"]:
@@ -112,10 +113,10 @@ async def play(ctx, *, query: str = None):
         await ctx.send(embed=embed)
 
     except Exception as e:
-        await ctx.send(f"❌ Playback Error. Please try again.")
+        await ctx.send("❌ Playback Error. Please try again.")
         print(f"Error details: {e}")
 
-# --- 🌟 VOLUME COMMAND (PREMIUM ONLY) ---
+# --- 🔊 VOLUME COMMAND (PREMIUM ONLY) ---
 @bot.command()
 async def volume(ctx, vol: int):
     if ctx.author.id not in PREMIUM_USERS:
@@ -127,7 +128,7 @@ async def volume(ctx, vol: int):
     ctx.voice_client.source.volume = vol / 100
     await ctx.send(f"🔊 Volume changed to **{vol}%**")
 
-# --- STOP COMMAND ---
+# --- 🛑 STOP COMMAND ---
 @bot.command()
 async def stop(ctx):
     if ctx.voice_client and ctx.voice_client.is_playing():
@@ -136,7 +137,7 @@ async def stop(ctx):
     else:
         await ctx.send("❌ No music is playing right now.")
 
-# --- 🛡️ MODERATION COMMANDS ---
+# --- 🛡 MODERATION COMMANDS ---
 @bot.command()
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, reason=None):
@@ -157,7 +158,7 @@ async def on_guild_channel_delete(channel):
         if user.id not in PREMIUM_USERS and user.id != channel.guild.owner_id:
             try:
                 await channel.guild.ban(user, reason="Anti-Nuke: Unauthorised Channel Deletion")
-                # Deleted channel को तुरंत वापस क्रिएट करना
+                # Deleted channel ko turant wapas create karna
                 await channel.guild.create_text_channel(name=channel.name, category=channel.category)
             except Exception as e:
                 print(f"Anti-Nuke Error: {e}")
@@ -173,5 +174,5 @@ async def on_guild_role_delete(role):
                 print(f"Anti-Nuke Error: {e}")
 
 # यह टोकन को Render की environment variables से सुरक्षित तरीके से उठाएगा
+keep_alive()  # <--- Render के लिए जोड़ा गया
 bot.run(os.getenv('DISCORD_TOKEN'))
-
