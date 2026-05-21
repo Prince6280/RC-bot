@@ -118,9 +118,9 @@ async def play(ctx, *, query: str = None):
         embed.set_footer(text="Vibing for the Road To 3K Music Fest at Royal Club!")
         await ctx.send(embed=embed)
 
-   except Exception as e:
+    except Exception as e:
+        # <--- यहाँ हमने बदलाव किया है ताकि एरर Discord चैट में दिखे --->
         await ctx.send(f"❌ Playback Error. Please try again.\n**Technical Error:** `{e}`")
-
 
 # --- 🔊 VOLUME COMMAND (PREMIUM ONLY) ---
 @bot.command()
