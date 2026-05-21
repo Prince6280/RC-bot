@@ -44,7 +44,6 @@ intents.guilds = True
 intents.members = True
 intents.messages = True 
 
-# 🔥 YAHAN CHANGE KIYA HAI: Default boring help menu ko disable kar diya
 bot = commands.Bot(command_prefix=">", intents=intents, help_command=None)
 
 PREMIUM_USERS = [149017434425665333] 
@@ -63,42 +62,37 @@ async def on_ready():
 async def custom_help(ctx):
     embed = discord.Embed(
         title="🌟 RC Music & Guardian Bot",
-        description="Welcome to the ultimate DJ and Security bot for the **Royal Club**! Here is everything I can do for you:",
-        color=discord.Color.from_rgb(43, 45, 49) # Dark Discord Theme Color
+        description="Welcome to the ultimate DJ and Security bot for the **Road To 3K Music Fest**! Here is everything I can do:",
+        color=discord.Color.from_rgb(43, 45, 49) 
     )
     
-    # Music Category
     embed.add_field(
         name="🎵 Music Commands", 
         value="`>play [song]` - Play a track or add to queue\n`>skip` - Skip current track\n`>stop` - Stop music & clear queue", 
         inline=False
     )
     
-    # VIP DJ Category
     embed.add_field(
         name="🎛️ VIP DJ Effects (Premium)", 
         value="`>bass` - Extreme Bass Boost\n`>8d` - 8D Surround Sound\n`>nightcore` - Nightcore Mode\n`>normal` - Reset audio\n`>volume [0-100]` - Set volume\n`>claim_premium [key]` - Unlock VIP features", 
         inline=False
     )
     
-    # Profile Category
     embed.add_field(
         name="🖼️ Profile Commands", 
         value="`>avatar [@user]` - View high-res Avatar\n`>banner [@user]` - View user Banner", 
         inline=False
     )
     
-    # Security Category
     embed.add_field(
         name="🛡️ Security & Admin", 
         value="`>backup_create` - Save server layout\n`>backup_load` - Restore server layout\n`>kick / >ban` - Moderation\n\n*(🛡️ Anti-Nuke, Anti-Raid & Anti-Spam are 24/7 Active Automatically)*", 
         inline=False
     )
     
-    # Thumbnail and Footer
     if bot.user.avatar:
         embed.set_thumbnail(url=bot.user.avatar.url)
-    embed.set_footer(text="Vibing for the Road To 3K Music Fest!", icon_url=ctx.author.display_avatar.url)
+    embed.set_footer(text="Vibing for the Road To 3K Music Fest!", icon_url=ctx.author.display_avatar.url if ctx.author.display_avatar else None)
     
     await ctx.send(embed=embed)
 
@@ -167,7 +161,7 @@ async def backup_create(ctx):
         "channels": [{"name": c.name, "type": str(c.type), "category": c.category.name if c.category else None} for c in ctx.guild.channels]
     }
     with open(f"backup_{ctx.guild.id}.json", "w") as f: json.dump(backup_data, f, indent=4)
-    await ctx.send("✅ **Backup Created Successfully!**\nUse `>backup_load` if your server gets nuked.")
+    await ctx.send("✅ **Backup Created Successfully!**\nUse `>backup_load` to restore.")
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -190,7 +184,7 @@ def get_audio_options(guild_id):
     elif effect == "nightcore": base_options += ' -af "asetrate=44100*1.25,atempo=1.25"'
     return {'options': base_options}
 
-# --- 🎵 CORE MUSIC SYSTEM ---
+# --- 🎵 CORE MUSIC SYSTEM (ANTI-FREEZE) ---
 async def play_next(ctx):
     if ctx.guild.id in music_queues and len(music_queues[ctx.guild.id]) > 0:
         song = music_queues[ctx.guild.id].pop(0) 
@@ -200,10 +194,16 @@ async def play_next(ctx):
             except: pass
 
         ydl_opts_dl = {'format': 'bestaudio/best', 'outtmpl': file_name, 'quiet': True}
-        msg = await ctx.send(f"⏳ **Downloading track for best quality...**")
+        msg = await ctx.send(f"⏳ **Downloading track... (Please wait)**")
         
+        # Async Download function (Bot Freeze nahi hoga)
+        def download_song():
+            with yt_dlp.YoutubeDL(ydl_opts_dl) as ydl: 
+                ydl.extract_info(song['webpage_url'], download=True)
+                
         try:
-            with yt_dlp.YoutubeDL(ydl_opts_dl) as ydl: ydl.extract_info(song['webpage_url'], download=True)
+            await asyncio.to_thread(download_song)
+            
             def after_play(error):
                 coro = play_next(ctx)
                 fut = asyncio.run_coroutine_threadsafe(coro, bot.loop)
@@ -241,10 +241,18 @@ async def play(ctx, *, query: str = None):
 
     await ctx.send("🔍 **Searching track...**")
     ydl_opts_search = {'format': 'bestaudio', 'quiet': True, 'noplaylist': True}
-    with yt_dlp.YoutubeDL(ydl_opts_search) as ydl:
-        info = ydl.extract_info(f"scsearch:{query}", download=False)
-        if 'entries' in info and len(info['entries']) > 0: info = info['entries'][0]
-        else: return await ctx.send("❌ Track not found.")
+    
+    # Async Search function (Taki bot hang na ho)
+    def search_song():
+        with yt_dlp.YoutubeDL(ydl_opts_search) as ydl:
+            return ydl.extract_info(f"scsearch:{query}", download=False)
+            
+    try:
+        info = await asyncio.to_thread(search_song)
+        if 'entries' in info and len(info['entries']) > 0: 
+            info = info['entries'][0]
+        else: 
+            return await ctx.send("❌ Track not found.")
             
         song_data = {
             'title': info.get('title', 'Unknown Title'),
@@ -252,15 +260,18 @@ async def play(ctx, *, query: str = None):
             'webpage_url': info.get('webpage_url', info.get('url'))
         }
 
-    if ctx.guild.id not in music_queues: music_queues[ctx.guild.id] = []
-    music_queues[ctx.guild.id].append(song_data)
-    
-    if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
-        await play_next(ctx)
-    else:
-        embed = discord.Embed(title="📝 Added to Queue", description=f"**{song_data['title']}**", color=discord.Color.blue())
-        if song_data['thumbnail']: embed.set_thumbnail(url=song_data['thumbnail'])
-        await ctx.send(embed=embed)
+        if ctx.guild.id not in music_queues: music_queues[ctx.guild.id] = []
+        music_queues[ctx.guild.id].append(song_data)
+        
+        if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
+            await play_next(ctx)
+        else:
+            embed = discord.Embed(title="📝 Added to Queue", description=f"**{song_data['title']}**", color=discord.Color.blue())
+            if song_data['thumbnail']: embed.set_thumbnail(url=song_data['thumbnail'])
+            await ctx.send(embed=embed)
+            
+    except Exception as e:
+        await ctx.send("❌ Search failed due to network issue. Try again!")
 
 @bot.command()
 async def skip(ctx):
@@ -274,7 +285,8 @@ async def skip(ctx):
 async def avatar(ctx, member: discord.Member = None):
     member = member or ctx.author
     embed = discord.Embed(title=f"📸 {member.display_name}'s Avatar", color=discord.Color.purple())
-    embed.set_image(url=member.display_avatar.url)
+    if member.display_avatar:
+        embed.set_image(url=member.display_avatar.url)
     embed.set_footer(text="Road To 3K Music Fest")
     await ctx.send(embed=embed)
 
@@ -328,6 +340,11 @@ async def normal(ctx):
 async def volume(ctx, vol: int):
     if ctx.author.id not in PREMIUM_USERS: return await ctx.send("❌ **VIP Only!**")
     if not ctx.voice_client: return await ctx.send("❌ I am not in a voice channel.")
+    
+    # Bug fix: Ensure music is playing before setting volume
+    if not ctx.voice_client.source: 
+        return await ctx.send("❌ DJ is not playing anything right now! Play a song first.")
+        
     if not 0 <= vol <= 100: return await ctx.send("❌ Volume must be between 0 and 100.")
     ctx.voice_client.source.volume = vol / 100
     await ctx.send(f"🔊 Volume changed to **{vol}%**")
