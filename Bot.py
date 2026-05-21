@@ -16,7 +16,6 @@ if not os.path.exists("./ffmpeg"):
     arch = platform.machine().lower()
     print(f"Detected System Architecture: {arch}")
     
-    # Render ke ARM ya Intel processor ke hisaab se sahi file chunna
     if "aarch64" in arch or "arm" in arch:
         url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz"
     else:
@@ -28,18 +27,16 @@ if not os.path.exists("./ffmpeg"):
     print("Extracting FFmpeg binary...")
     with tarfile.open("ffmpeg.tar.xz") as tar:
         for member in tar.getmembers():
-            # Sirf asli ffmpeg binary file ko nikalna hai
             if member.isfile() and member.name.endswith("/ffmpeg"):
                 f_in = tar.extractfile(member)
                 with open("./ffmpeg", "wb") as f_out:
                     f_out.write(f_in.read())
                 break
                 
-    # File ko run karne ki permission dena
     st = os.stat("./ffmpeg")
     os.chmod("./ffmpeg", st.st_mode | stat.S_IEXEC)
     os.remove("ffmpeg.tar.xz")
-    print("FFmpeg setup completed successfully! No more -11 errors.")
+    print("FFmpeg setup completed successfully!")
 
 # --- BOT CONFIGURATION ---
 intents = discord.Intents.default()
@@ -49,21 +46,18 @@ intents.members = True
 
 bot = commands.Bot(command_prefix=">", intents=intents)
 
-# 🌟 PREMIUM USERS & WHITE-LIST LIST
 PREMIUM_USERS = [149017434425665333]
 
+# --- 🔥 YAHAN CHANGE KIYA HAI (LOCAL DOWNLOAD SYSTEM) 🔥 ---
 ydl_opts = {
     'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
-    'skip_download': True,
-    'nocheckcertificate': True,
-    'default_search': 'auto',
-    'source_address': '0.0.0.0' 
+    'outtmpl': 'audio_file', # Gane ko server par save karega
 }
 
+# Local file ke liye network options hata diye hain
 ffmpeg_options = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn -b:a 64k'
 }
 
@@ -71,7 +65,7 @@ ffmpeg_options = {
 async def on_ready():
     print(f"Logged in as {bot.user.name} - System Online on Cloud!")
 
-# --- 🎵 ULTRA STABLE PLAY COMMAND ---
+# --- 🎵 ULTRA STABLE PLAY COMMAND (DOWNLOAD & PLAY) ---
 @bot.command()
 async def play(ctx, *, query: str = None):
     if not query:
@@ -85,30 +79,36 @@ async def play(ctx, *, query: str = None):
         except asyncio.TimeoutError:
             return await ctx.send("❌ Connection timeout. Server is slow, please try again.")
         except Exception as e:
-            print(f"Connection Error: {e}")
             return await ctx.send("❌ Failed to connect to the voice channel.")
 
     voice_client = ctx.voice_client
 
     try:
-        await ctx.send("🎵 Searching via Secure SoundCloud Gateway...")
+        await ctx.send("⏳ **Downloading track to secure server... (Just 2-3 seconds)**")
 
+        # Purana gana delete karna taaki storage full na ho
+        if os.path.exists("audio_file"):
+            try:
+                os.remove("audio_file")
+            except:
+                pass
+
+        # Naya gana download karna
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f"scsearch:{query}", download=False)
+            info = ydl.extract_info(f"scsearch:{query}", download=True)
             
             if 'entries' in info and len(info['entries']) > 0:
                 info = info['entries'][0]
             else:
                 return await ctx.send("❌ Track not found on SoundCloud. Try another name.")
 
-            audio_url = info['url']
             title = info.get('title', 'Unknown Title')
 
         if voice_client.is_playing():
             voice_client.stop()
         
-        # Exact sahi architecture wali file use ho rahi hai
-        source = discord.FFmpegPCMAudio(audio_url, executable="./ffmpeg", **ffmpeg_options)
+        # Local audio_file ko play karna (100% bypasses all internet blocks)
+        source = discord.FFmpegPCMAudio("audio_file", executable="./ffmpeg", **ffmpeg_options)
         source = discord.PCMVolumeTransformer(source)
         voice_client.play(source)
 
@@ -163,7 +163,7 @@ async def on_guild_channel_delete(channel):
                 await channel.guild.ban(user, reason="Anti-Nuke: Unauthorised Channel Deletion")
                 await channel.guild.create_text_channel(name=channel.name, category=channel.category)
             except Exception as e:
-                print(f"Anti-Nuke Error: {e}")
+                pass
 
 @bot.event
 async def on_guild_role_delete(role):
@@ -173,7 +173,7 @@ async def on_guild_role_delete(role):
             try:
                 await role.guild.ban(user, reason="Anti-Nuke: Unauthorised Role Deletion")
             except Exception as e:
-                print(f"Anti-Nuke Error: {e}")
+                pass
 
 keep_alive()  
 bot.run(os.getenv('DISCORD_TOKEN'))
