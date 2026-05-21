@@ -6,7 +6,7 @@ import yt_dlp
 import urllib.request
 import re
 import json
-from keep_alive import keep_alive  # <--- Render के लिए जोड़ा गया
+from keep_alive import keep_alive  # <--- Render के लिए
 
 # --- AUTO FFMPEG DOWNLOADER FOR CLOUD ---
 # यह रेंडर क्लाउड पर बिना किसी लिनक्स कमांड एक्सेस के ही FFmpeg सेटअप कर देगा
@@ -57,11 +57,14 @@ async def play(ctx, *, query: str = None):
     if not ctx.author.voice:
         return await ctx.send("❌ Please join a voice channel first! 🎧")
 
-        if ctx.voice_client is None:
-    try:
-            await ctx.author.voice.channel.connect(timeout=60.0) 
+    if ctx.voice_client is None:
+        try:
+            await ctx.author.voice.channel.connect(timeout=60.0)
         except asyncio.TimeoutError:
-            return await ctx.send("❌ Connection timeout. Server is slow, try again.")
+            return await ctx.send("❌ Connection timeout. Server is slow, please try again.")
+        except Exception as e:
+            print(f"Connection Error: {e}")
+            return await ctx.send("❌ Failed to connect to the voice channel.")
 
     voice_client = ctx.voice_client
 
@@ -177,5 +180,5 @@ async def on_guild_role_delete(role):
                 print(f"Anti-Nuke Error: {e}")
 
 # यह टोकन को Render की environment variables से सुरक्षित तरीके से उठाएगा
-keep_alive()  # <--- Render के लिए जोड़ा गया
+keep_alive()  
 bot.run(os.getenv('DISCORD_TOKEN'))
