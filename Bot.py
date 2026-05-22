@@ -156,7 +156,7 @@ def get_audio_options(guild_id):
     elif effect == "nightcore": base_options += ' -af "asetrate=44100*1.25,atempo=1.25"'
     return {'options': base_options}
 
-# --- 🎵 YOUTUBE COOKIE BYPASS SYSTEM ---
+# --- 🎵 YOUTUBE MUSIC BYPASS SYSTEM (NO JS CHALLENGE) ---
 async def play_next(ctx):
     if ctx.guild.id in music_queues and len(music_queues[ctx.guild.id]) > 0:
         song = music_queues[ctx.guild.id].pop(0) 
@@ -165,16 +165,16 @@ async def play_next(ctx):
             try: os.remove(file_name)
             except: pass
 
-        # 🔥 YAHAN CHANGE KIYA HAI: Ab bot cookies.txt use karega
+        # 🔥 YAHAN CHANGE KIYA HAI: Sirf Android Client use karega (Web hata diya taaki JS error na aaye)
         ydl_opts_dl = {
             'format': 'bestaudio/best', 
             'outtmpl': file_name, 
             'quiet': True,
-            'cookiefile': 'cookies.txt', # <--- MAGIC HAPPENS HERE
-            'extractor_args': {'youtube': ['player_client=android,web']} 
+            'cookiefile': 'cookies.txt', 
+            'extractor_args': {'youtube': ['player_client=android']} # Sirf Android Mobile API
         }
         
-        msg = await ctx.send(f"⏳ **Downloading latest track using VIP Access...**")
+        msg = await ctx.send(f"⏳ **Downloading track via Android API...**")
         
         def download_song():
             with yt_dlp.YoutubeDL(ydl_opts_dl) as ydl: 
@@ -202,7 +202,7 @@ async def play_next(ctx):
             await msg.delete()
             await ctx.send(embed=embed)
         except Exception as e:
-            await ctx.send(f"❌ YouTube blocked the request. Checking cookies...")
+            await ctx.send(f"❌ Playback Error. Skipping to next track...")
             print(f"Download Error: {e}")
             await play_next(ctx) 
     else:
@@ -217,27 +217,28 @@ async def play(ctx, *, query: str = None):
         try: await ctx.author.voice.channel.connect(timeout=60.0)
         except: return await ctx.send("❌ Failed to connect to the voice channel.")
 
-    await ctx.send("🔍 **Searching YouTube...**")
+    await ctx.send("🔍 **Searching YouTube Music...**")
     
-    # 🔥 YAHAN BHI COOKIES ADD KI HAI
+    # 🔥 YAHAN CHANGE KIYA HAI: 'ytsearch' ki jagah 'ytmsearch' (YouTube Music) lagaya hai
     ydl_opts_search = {
         'format': 'bestaudio', 
         'quiet': True, 
         'noplaylist': True,
-        'cookiefile': 'cookies.txt', # <--- MAGIC HAPPENS HERE
-        'extractor_args': {'youtube': ['player_client=android,web']} 
+        'cookiefile': 'cookies.txt', 
+        'extractor_args': {'youtube': ['player_client=android']} # Sirf Android Mobile API
     }
     
     def search_song():
         with yt_dlp.YoutubeDL(ydl_opts_search) as ydl:
-            return ydl.extract_info(f"ytsearch:{query}", download=False)
+            # YouTube Music par search karega (isme JS error almost nahi aata)
+            return ydl.extract_info(f"ytmsearch:{query}", download=False)
             
     try:
         info = await asyncio.to_thread(search_song)
         if 'entries' in info and len(info['entries']) > 0: 
             info = info['entries'][0]
         else: 
-            return await ctx.send("❌ Track not found on YouTube.")
+            return await ctx.send("❌ Track not found on YouTube Music.")
             
         song_data = {
             'title': info.get('title', 'Unknown Title'),
@@ -256,7 +257,7 @@ async def play(ctx, *, query: str = None):
             await ctx.send(embed=embed)
             
     except Exception as e:
-        await ctx.send("❌ Search failed! Make sure `cookies.txt` is uploaded properly.")
+        await ctx.send("❌ Search failed! YouTube might be rate-limiting. Try again.")
         print(f"Search Error: {e}")
 
 @bot.command()
