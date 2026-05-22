@@ -66,34 +66,13 @@ async def custom_help(ctx):
         color=discord.Color.from_rgb(43, 45, 49) 
     )
     
-    embed.add_field(
-        name="🎵 Music Commands", 
-        value="`>play [song]` - Play a track or add to queue\n`>skip` - Skip current track\n`>stop` - Stop music & clear queue", 
-        inline=False
-    )
+    embed.add_field(name="🎵 Music Commands", value="`>play [song]` - Play a track or add to queue\n`>skip` - Skip current track\n`>stop` - Stop music & clear queue", inline=False)
+    embed.add_field(name="🎛️ VIP DJ Effects (Premium)", value="`>bass` - Extreme Bass Boost\n`>8d` - 8D Surround Sound\n`>nightcore` - Nightcore Mode\n`>normal` - Reset audio\n`>volume [0-100]` - Set volume\n`>claim_premium [key]` - Unlock VIP features", inline=False)
+    embed.add_field(name="🖼️ Profile Commands", value="`>avatar [@user]` - View high-res Avatar\n`>banner [@user]` - View user Banner", inline=False)
+    embed.add_field(name="🛡️ Security & Admin", value="`>backup_create` - Save server layout\n`>backup_load` - Restore server layout\n`>kick / >ban` - Moderation\n\n*(🛡️ Anti-Nuke, Anti-Raid & Anti-Spam are 24/7 Active Automatically)*", inline=False)
     
-    embed.add_field(
-        name="🎛️ VIP DJ Effects (Premium)", 
-        value="`>bass` - Extreme Bass Boost\n`>8d` - 8D Surround Sound\n`>nightcore` - Nightcore Mode\n`>normal` - Reset audio\n`>volume [0-100]` - Set volume\n`>claim_premium [key]` - Unlock VIP features", 
-        inline=False
-    )
-    
-    embed.add_field(
-        name="🖼️ Profile Commands", 
-        value="`>avatar [@user]` - View high-res Avatar\n`>banner [@user]` - View user Banner", 
-        inline=False
-    )
-    
-    embed.add_field(
-        name="🛡️ Security & Admin", 
-        value="`>backup_create` - Save server layout\n`>backup_load` - Restore server layout\n`>kick / >ban` - Moderation\n\n*(🛡️ Anti-Nuke, Anti-Raid & Anti-Spam are 24/7 Active Automatically)*", 
-        inline=False
-    )
-    
-    if bot.user.avatar:
-        embed.set_thumbnail(url=bot.user.avatar.url)
+    if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
     embed.set_footer(text="Vibing for the Road To 3K Music Fest!", icon_url=ctx.author.display_avatar.url if ctx.author.display_avatar else None)
-    
     await ctx.send(embed=embed)
 
 # --- 🛡️ ADVANCED SECURITY SYSTEM ---
@@ -102,20 +81,16 @@ async def on_message(message):
     if message.author.bot or message.author.id in PREMIUM_USERS or message.author.id == message.guild.owner_id:
         await bot.process_commands(message)
         return
-
     author_id = message.author.id
     current_time = time.time()
-
     if author_id not in spam_tracker: spam_tracker[author_id] = []
     spam_tracker[author_id] = [msg_time for msg_time in spam_tracker[author_id] if current_time - msg_time < 5]
     spam_tracker[author_id].append(current_time)
-
     if len(spam_tracker[author_id]) > 5:
         try:
             await message.delete()
             await message.channel.send(f"⚠️ {message.author.mention}, Stop spamming! You might get kicked.", delete_after=3)
         except: pass
-    
     await bot.process_commands(message)
 
 @bot.event
@@ -124,7 +99,6 @@ async def on_member_join(member):
     global raid_tracker
     raid_tracker = [join_time for join_time in raid_tracker if current_time - join_time < 10]
     raid_tracker.append(current_time)
-
     if len(raid_tracker) > 4:
         try:
             await member.kick(reason="Anti-Raid: Mass joining detected!")
@@ -150,7 +124,6 @@ async def on_guild_role_delete(role):
             try: await role.guild.ban(user, reason="Anti-Nuke: Unauthorised Role Deletion")
             except: pass
 
-# --- 💾 BACKUP SYSTEM ---
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def backup_create(ctx):
@@ -175,7 +148,6 @@ async def backup_load(ctx):
         if cat["name"] not in existing_categories: await ctx.guild.create_category(cat["name"])
     await ctx.send("✅ Server Layout Restored (Basic Recovery Complete)!")
 
-# --- 🎛️ DYNAMIC AUDIO FILTERS LOGIC ---
 def get_audio_options(guild_id):
     effect = active_effects.get(guild_id, "normal")
     base_options = '-vn -b:a 64k'
@@ -184,7 +156,7 @@ def get_audio_options(guild_id):
     elif effect == "nightcore": base_options += ' -af "asetrate=44100*1.25,atempo=1.25"'
     return {'options': base_options}
 
-# --- 🎵 ULTRA STABLE SOUNDCLOUD MUSIC SYSTEM (ANTI-FREEZE) ---
+# --- 🎵 YOUTUBE COOKIE BYPASS SYSTEM ---
 async def play_next(ctx):
     if ctx.guild.id in music_queues and len(music_queues[ctx.guild.id]) > 0:
         song = music_queues[ctx.guild.id].pop(0) 
@@ -193,9 +165,16 @@ async def play_next(ctx):
             try: os.remove(file_name)
             except: pass
 
-        # Wapas Stable SoundCloud Engine par shift kiya taaki 403 error na aaye
-        ydl_opts_dl = {'format': 'bestaudio/best', 'outtmpl': file_name, 'quiet': True}
-        msg = await ctx.send(f"⏳ **Downloading track from Secure Gateway...**")
+        # 🔥 YAHAN CHANGE KIYA HAI: Ab bot cookies.txt use karega
+        ydl_opts_dl = {
+            'format': 'bestaudio/best', 
+            'outtmpl': file_name, 
+            'quiet': True,
+            'cookiefile': 'cookies.txt', # <--- MAGIC HAPPENS HERE
+            'extractor_args': {'youtube': ['player_client=android,web']} 
+        }
+        
+        msg = await ctx.send(f"⏳ **Downloading latest track using VIP Access...**")
         
         def download_song():
             with yt_dlp.YoutubeDL(ydl_opts_dl) as ydl: 
@@ -217,15 +196,14 @@ async def play_next(ctx):
             
             embed = discord.Embed(title="🎵 Now Playing", description=f"**{song['title']}**", color=discord.Color.green())
             if song['thumbnail']: embed.set_image(url=song['thumbnail']) 
-            
             current_effect = active_effects.get(ctx.guild.id, "normal").upper()
             if current_effect != "NORMAL": embed.add_field(name="🎛️ Active Effect", value=f"**{current_effect}**", inline=False)
-                
             embed.set_footer(text="Vibing for the Road To 3K Music Fest at Royal Club!")
             await msg.delete()
             await ctx.send(embed=embed)
         except Exception as e:
-            await ctx.send(f"❌ Error playing track. Network might be slow.")
+            await ctx.send(f"❌ YouTube blocked the request. Checking cookies...")
+            print(f"Download Error: {e}")
             await play_next(ctx) 
     else:
         await ctx.send("🎶 Queue is empty! DJ needs more tracks.")
@@ -239,21 +217,27 @@ async def play(ctx, *, query: str = None):
         try: await ctx.author.voice.channel.connect(timeout=60.0)
         except: return await ctx.send("❌ Failed to connect to the voice channel.")
 
-    await ctx.send("🔍 **Searching secure database...**")
+    await ctx.send("🔍 **Searching YouTube...**")
     
-    ydl_opts_search = {'format': 'bestaudio', 'quiet': True, 'noplaylist': True}
+    # 🔥 YAHAN BHI COOKIES ADD KI HAI
+    ydl_opts_search = {
+        'format': 'bestaudio', 
+        'quiet': True, 
+        'noplaylist': True,
+        'cookiefile': 'cookies.txt', # <--- MAGIC HAPPENS HERE
+        'extractor_args': {'youtube': ['player_client=android,web']} 
+    }
     
     def search_song():
         with yt_dlp.YoutubeDL(ydl_opts_search) as ydl:
-            # Wapas scsearch lagaya hai taaki YouTube IP Block na kare
-            return ydl.extract_info(f"scsearch:{query}", download=False)
+            return ydl.extract_info(f"ytsearch:{query}", download=False)
             
     try:
         info = await asyncio.to_thread(search_song)
         if 'entries' in info and len(info['entries']) > 0: 
             info = info['entries'][0]
         else: 
-            return await ctx.send("❌ Track not found. Try adding the artist name (e.g. `>play moves shubh`).")
+            return await ctx.send("❌ Track not found on YouTube.")
             
         song_data = {
             'title': info.get('title', 'Unknown Title'),
@@ -272,7 +256,8 @@ async def play(ctx, *, query: str = None):
             await ctx.send(embed=embed)
             
     except Exception as e:
-        await ctx.send("❌ Search failed due to network issue. Try again!")
+        await ctx.send("❌ Search failed! Make sure `cookies.txt` is uploaded properly.")
+        print(f"Search Error: {e}")
 
 @bot.command()
 async def skip(ctx):
@@ -286,8 +271,7 @@ async def skip(ctx):
 async def avatar(ctx, member: discord.Member = None):
     member = member or ctx.author
     embed = discord.Embed(title=f"📸 {member.display_name}'s Avatar", color=discord.Color.purple())
-    if member.display_avatar:
-        embed.set_image(url=member.display_avatar.url)
+    if member.display_avatar: embed.set_image(url=member.display_avatar.url)
     embed.set_footer(text="Road To 3K Music Fest")
     await ctx.send(embed=embed)
 
@@ -300,8 +284,7 @@ async def banner(ctx, member: discord.Member = None):
         embed.set_image(url=user.banner.url)
         embed.set_footer(text="Road To 3K Music Fest")
         await ctx.send(embed=embed)
-    else:
-        await ctx.send(f"❌ **{member.display_name}** does not have a custom banner!")
+    else: await ctx.send(f"❌ **{member.display_name}** does not have a custom banner!")
 
 # --- 👑 PREMIUM & EFFECTS COMMANDS ---
 @bot.command()
@@ -311,7 +294,7 @@ async def claim_premium(ctx, key: str = None):
         PREMIUM_USERS.append(ctx.author.id)
         embed = discord.Embed(title="🎉 Premium VIP Claimed!", description="**Welcome to the VIP Lounge!**", color=discord.Color.gold())
         await ctx.send(embed=embed)
-    else: await ctx.send("❌ **Invalid Key!** Use `>claim_premium ROADTO3K`")
+    else: await ctx.send("❌ **Invalid Key!**")
 
 @bot.command()
 async def bass(ctx):
@@ -341,10 +324,7 @@ async def normal(ctx):
 async def volume(ctx, vol: int):
     if ctx.author.id not in PREMIUM_USERS: return await ctx.send("❌ **VIP Only!**")
     if not ctx.voice_client: return await ctx.send("❌ I am not in a voice channel.")
-    
-    if not ctx.voice_client.source: 
-        return await ctx.send("❌ DJ is not playing anything right now! Play a song first.")
-        
+    if not ctx.voice_client.source: return await ctx.send("❌ DJ is not playing anything right now!")
     if not 0 <= vol <= 100: return await ctx.send("❌ Volume must be between 0 and 100.")
     ctx.voice_client.source.volume = vol / 100
     await ctx.send(f"🔊 Volume changed to **{vol}%**")
