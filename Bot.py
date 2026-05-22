@@ -11,7 +11,7 @@ import time
 import json
 from keep_alive import keep_alive  
 
-# --- SMART FFMPEG DOWNLOADER ---
+# --- SMART FFMPEG DOWNLOADER (100% STABLE) ---
 if not os.path.exists("./ffmpeg"):
     arch = platform.machine().lower()
     print(f"Detected System Architecture: {arch}")
@@ -66,7 +66,7 @@ async def custom_help(ctx):
         color=discord.Color.from_rgb(43, 45, 49) 
     )
     
-    embed.add_field(name="🎵 Music Commands", value="`>play [song]` - Play a track or add to queue\n`>skip` - Skip current track\n`>stop` - Stop music & clear queue", inline=False)
+    embed.add_field(name="🎵 Music Commands", value="`>play [song]` - Play via SoundCloud\n`>play [JioSaavn Link]` - Play direct from JioSaavn\n`>skip` - Skip current track\n`>stop` - Stop music & clear queue", inline=False)
     embed.add_field(name="🎛️ VIP DJ Effects (Premium)", value="`>bass` - Extreme Bass Boost\n`>8d` - 8D Surround Sound\n`>nightcore` - Nightcore Mode\n`>normal` - Reset audio\n`>volume [0-100]` - Set volume\n`>claim_premium [key]` - Unlock VIP features", inline=False)
     embed.add_field(name="🖼️ Profile Commands", value="`>avatar [@user]` - View high-res Avatar\n`>banner [@user]` - View user Banner", inline=False)
     embed.add_field(name="🛡️ Security & Admin", value="`>backup_create` - Save server layout\n`>backup_load` - Restore server layout\n`>kick / >ban` - Moderation\n\n*(🛡️ Anti-Nuke, Anti-Raid & Anti-Spam are 24/7 Active Automatically)*", inline=False)
@@ -156,7 +156,7 @@ def get_audio_options(guild_id):
     elif effect == "nightcore": base_options += ' -af "asetrate=44100*1.25,atempo=1.25"'
     return {'options': base_options}
 
-# --- 🎵 YOUTUBE MUSIC BYPASS SYSTEM (NO JS CHALLENGE) ---
+# --- 🎵 ULTRA STABLE ENGINE (SOUNDCLOUD + JIOSAAVN DIRECT) ---
 async def play_next(ctx):
     if ctx.guild.id in music_queues and len(music_queues[ctx.guild.id]) > 0:
         song = music_queues[ctx.guild.id].pop(0) 
@@ -165,16 +165,8 @@ async def play_next(ctx):
             try: os.remove(file_name)
             except: pass
 
-        # 🔥 YAHAN CHANGE KIYA HAI: Sirf Android Client use karega (Web hata diya taaki JS error na aaye)
-        ydl_opts_dl = {
-            'format': 'bestaudio/best', 
-            'outtmpl': file_name, 
-            'quiet': True,
-            'cookiefile': 'cookies.txt', 
-            'extractor_args': {'youtube': ['player_client=android']} # Sirf Android Mobile API
-        }
-        
-        msg = await ctx.send(f"⏳ **Downloading track via Android API...**")
+        ydl_opts_dl = {'format': 'bestaudio/best', 'outtmpl': file_name, 'quiet': True}
+        msg = await ctx.send(f"⏳ **Downloading track from Secure Gateway...**")
         
         def download_song():
             with yt_dlp.YoutubeDL(ydl_opts_dl) as ydl: 
@@ -210,35 +202,31 @@ async def play_next(ctx):
 
 @bot.command()
 async def play(ctx, *, query: str = None):
-    if not query: return await ctx.send("❌ Please provide a song name!")
+    if not query: return await ctx.send("❌ Please provide a song name or JioSaavn/SoundCloud Link!")
     if not ctx.author.voice: return await ctx.send("❌ Please join a voice channel first! 🎧")
 
     if ctx.voice_client is None:
         try: await ctx.author.voice.channel.connect(timeout=60.0)
         except: return await ctx.send("❌ Failed to connect to the voice channel.")
 
-    await ctx.send("🔍 **Searching YouTube Music...**")
+    await ctx.send("🔍 **Searching...**")
     
-    # 🔥 YAHAN CHANGE KIYA HAI: 'ytsearch' ki jagah 'ytmsearch' (YouTube Music) lagaya hai
-    ydl_opts_search = {
-        'format': 'bestaudio', 
-        'quiet': True, 
-        'noplaylist': True,
-        'cookiefile': 'cookies.txt', 
-        'extractor_args': {'youtube': ['player_client=android']} # Sirf Android Mobile API
-    }
+    ydl_opts_search = {'format': 'bestaudio', 'quiet': True, 'noplaylist': True}
     
     def search_song():
         with yt_dlp.YoutubeDL(ydl_opts_search) as ydl:
-            # YouTube Music par search karega (isme JS error almost nahi aata)
-            return ydl.extract_info(f"ytmsearch:{query}", download=False)
+            # Smart Detector: Link diya hai ya normal naam?
+            if query.startswith("http://") or query.startswith("https://"):
+                return ydl.extract_info(query, download=False)
+            else:
+                return ydl.extract_info(f"scsearch:{query}", download=False)
             
     try:
         info = await asyncio.to_thread(search_song)
         if 'entries' in info and len(info['entries']) > 0: 
             info = info['entries'][0]
-        else: 
-            return await ctx.send("❌ Track not found on YouTube Music.")
+        elif not info: 
+            return await ctx.send("❌ Track not found. Please check the link or name.")
             
         song_data = {
             'title': info.get('title', 'Unknown Title'),
@@ -257,7 +245,7 @@ async def play(ctx, *, query: str = None):
             await ctx.send(embed=embed)
             
     except Exception as e:
-        await ctx.send("❌ Search failed! YouTube might be rate-limiting. Try again.")
+        await ctx.send("❌ Failed to load track. Network issue or invalid link!")
         print(f"Search Error: {e}")
 
 @bot.command()
