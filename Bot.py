@@ -43,6 +43,7 @@ intents.message_content = True
 intents.guilds = True
 intents.members = True
 intents.messages = True 
+intents.voice_states = True 
 
 bot = commands.Bot(command_prefix=">", intents=intents, help_command=None)
 
@@ -51,7 +52,9 @@ SECRET_PREMIUM_KEY = "ROADTO3K"
 music_queues = {} 
 active_effects = {} 
 spam_tracker = {}
-raid_tracker = []
+raid_tracker = {}
+stay_247 = {} 
+anti_nuke_state = {} # 🔥 Naya Anti-Nuke Toggle Tracker
 
 @bot.event
 async def on_ready():
@@ -108,11 +111,8 @@ class MusicControls(discord.ui.View):
 # --- 🌟 ZEON STYLE BLACK CUSTOM HELP MENU ---
 @bot.command(name="help")
 async def custom_help(ctx):
-    # Pure Black Theme (0,0,0)
     embed = discord.Embed(color=discord.Color.from_rgb(0, 0, 0))
-    
     embed.title = f"Hey , I'm {bot.user.name} ™"
-    
     total_cmds = len(bot.commands)
     
     desc = (
@@ -122,7 +122,8 @@ async def custom_help(ctx):
         f"• **Total commands:** {total_cmds}\n\n"
         "🎵 » **Music Commands** (`>play`, `>skip`, `>stop`)\n"
         "🎛️ » **VIP DJ Effects** (`>bass`, `>8d`, `>nightcore`, `>normal`, `>volume`)\n"
-        "🛡️ » **Security (Auto)** (`Anti-Spam`, `Anti-Raid`, `Anti-Nuke`)\n"
+        "⏳ » **VIP Utility** (`>247 enable`, `>247 disable`)\n"
+        "🛡️ » **Security** (`>antinuke enable/disable`, `Anti-Spam`, `Anti-Raid`)\n"
         "⚙️ » **Moderation** (`>kick`, `>ban`)\n"
         "💾 » **Backup System** (`>backup_create`, `>backup_load`)\n"
         "🖼️ » **Profile** (`>avatar`, `>banner`)\n"
@@ -130,28 +131,27 @@ async def custom_help(ctx):
     )
     embed.description = desc
     
-    # Pro Tip Section
-    embed.add_field(
-        name="__Pro Tip__", 
-        value="Claim your VIP access with `>claim_premium ROADTO3K` to unlock exclusive audio filters! 🌟", 
-        inline=False
-    )
+    embed.add_field(name="__Pro Tip__", value="Claim your VIP access with `>claim_premium ROADTO3K` to unlock exclusive audio filters and 24/7 mode! 🌟", inline=False)
+    embed.add_field(name="🔗 __Links__", value="[Invite me](https://discord.com) | [Support Server](https://discord.com)", inline=False)
     
-    # Links Section
-    embed.add_field(
-        name="🔗 __Links__", 
-        value="[Invite me](https://discord.com) | [Support Server](https://discord.com) | [Vote](https://discord.com)", 
-        inline=False
-    )
-    
-    if bot.user.avatar:
-        embed.set_thumbnail(url=bot.user.avatar.url)
-        
+    if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
     embed.set_footer(text="Road To 3K Music Fest", icon_url=ctx.author.display_avatar.url if ctx.author.display_avatar else None)
     
     await ctx.send(embed=embed)
 
-# --- 🛡️ SECURITY SYSTEM (SPAM/RAID/NUKE) ---
+# --- 🛡️ SECURITY SYSTEM (SPAM/RAID/NUKE TOGGLE) ---
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def antinuke(ctx, state: str = None):
+    if state == "enable":
+        anti_nuke_state[ctx.guild.id] = True
+        await ctx.send("🛡️ **Anti-Nuke System is now ENABLED!** The server is fully protected.")
+    elif state == "disable":
+        anti_nuke_state[ctx.guild.id] = False
+        await ctx.send("⚠️ **Anti-Nuke System is now DISABLED!** The server is vulnerable to channel/role deletions.")
+    else:
+        await ctx.send("❌ **Invalid Command!** Use `>antinuke enable` or `>antinuke disable`.")
+
 @bot.event
 async def on_message(message):
     if message.author.bot or message.author.id in PREMIUM_USERS or message.author.id == message.guild.owner_id:
@@ -171,30 +171,41 @@ async def on_message(message):
 
 @bot.event
 async def on_member_join(member):
+    # Anti-Raid check
+    if not anti_nuke_state.get(member.guild.id, True): return # Check if security is enabled
+    
     current_time = time.time()
-    global raid_tracker
-    raid_tracker = [join_time for join_time in raid_tracker if current_time - join_time < 10]
-    raid_tracker.append(current_time)
-    if len(raid_tracker) > 4:
+    guild_id = member.guild.id
+    if guild_id not in raid_tracker: raid_tracker[guild_id] = []
+    
+    raid_tracker[guild_id] = [join_time for join_time in raid_tracker[guild_id] if current_time - join_time < 10]
+    raid_tracker[guild_id].append(current_time)
+    if len(raid_tracker[guild_id]) > 4:
         try: await member.kick(reason="Anti-Raid")
         except: pass
 
 @bot.event
 async def on_guild_channel_delete(channel):
+    # Check if Anti-Nuke is toggled ON (True by default)
+    if not anti_nuke_state.get(channel.guild.id, True): return
+    
     async for entry in channel.guild.audit_logs(limit=1, action=discord.AuditLogAction.channel_delete):
         user = entry.user
         if user.id not in PREMIUM_USERS and user.id != channel.guild.owner_id:
             try:
-                await channel.guild.ban(user, reason="Anti-Nuke")
+                await channel.guild.ban(user, reason="Anti-Nuke: Unauthorised Channel Deletion")
                 await channel.guild.create_text_channel(name=channel.name, category=channel.category)
             except: pass
 
 @bot.event
 async def on_guild_role_delete(role):
+    # Check if Anti-Nuke is toggled ON
+    if not anti_nuke_state.get(role.guild.id, True): return
+    
     async for entry in role.guild.audit_logs(limit=1, action=discord.AuditLogAction.role_delete):
         user = entry.user
         if user.id not in PREMIUM_USERS and user.id != role.guild.owner_id:
-            try: await role.guild.ban(user, reason="Anti-Nuke")
+            try: await role.guild.ban(user, reason="Anti-Nuke: Unauthorised Role Deletion")
             except: pass
 
 @bot.command()
@@ -219,6 +230,17 @@ async def backup_load(ctx):
     for cat in backup_data["categories"]:
         if cat["name"] not in existing_categories: await ctx.guild.create_category(cat["name"])
     await ctx.send("✅ Server Restored!")
+
+# --- 🔥 AUTO RECONNECT FOR 24/7 MODE ---
+@bot.event
+async def on_voice_state_update(member, before, after):
+    if member.id == bot.user.id and before.channel and not after.channel:
+        guild_id = before.channel.guild.id
+        if stay_247.get(guild_id, False):
+            await asyncio.sleep(2) 
+            try:
+                await before.channel.connect(timeout=60.0)
+            except: pass
 
 def get_audio_options(guild_id):
     effect = active_effects.get(guild_id, "normal")
@@ -312,25 +334,25 @@ async def skip(ctx):
         await ctx.send("⏭️ **Song Skipped!**")
     else: await ctx.send("❌ No music is playing right now.")
 
-# --- PROFILE COMMANDS ---
-@bot.command(aliases=['av', 'pfp'])
-async def avatar(ctx, member: discord.Member = None):
-    member = member or ctx.author
-    embed = discord.Embed(title=f"📸 {member.display_name}'s Avatar", color=discord.Color.purple())
-    if member.display_avatar: embed.set_image(url=member.display_avatar.url)
-    await ctx.send(embed=embed)
+# --- 👑 VIP COMMANDS (PREMIUM, EFFECTS & 24/7) ---
+@bot.command(name="247")
+async def toggle_247(ctx, state: str = None):
+    if ctx.author.id not in PREMIUM_USERS: return await ctx.send("❌ **VIP Only!**")
+    
+    if state == "enable":
+        if not ctx.author.voice: return await ctx.send("❌ Please join a voice channel first!")
+        stay_247[ctx.guild.id] = True 
+        if not ctx.voice_client: await ctx.author.voice.channel.connect(timeout=60.0)
+        else: await ctx.voice_client.move_to(ctx.author.voice.channel)
+        await ctx.send("🟢 **24/7 Mode Enabled!** The DJ will stay here permanently. 🎧")
+        
+    elif state == "disable":
+        stay_247[ctx.guild.id] = False 
+        if ctx.voice_client: await ctx.voice_client.disconnect()
+        await ctx.send("🛑 **24/7 Mode Disabled!** The DJ has left the building.")
+    else:
+        await ctx.send("❌ **Invalid Command!** Use `>247 enable` or `>247 disable`")
 
-@bot.command()
-async def banner(ctx, member: discord.Member = None):
-    member = member or ctx.author
-    user = await bot.fetch_user(member.id)
-    if user.banner:
-        embed = discord.Embed(title=f"🌌 {member.display_name}'s Banner", color=discord.Color.purple())
-        embed.set_image(url=user.banner.url)
-        await ctx.send(embed=embed)
-    else: await ctx.send("❌ No custom banner!")
-
-# --- PREMIUM COMMANDS ---
 @bot.command()
 async def claim_premium(ctx, key: str = None):
     if ctx.author.id in PREMIUM_USERS: return await ctx.send("✅ You are already a **Premium User**! ⭐")
@@ -366,6 +388,24 @@ async def stop(ctx):
         ctx.voice_client.stop()
         await ctx.send("🛑 Stopped.")
     else: await ctx.send("❌ Nothing playing.")
+
+# --- PROFILE COMMANDS ---
+@bot.command(aliases=['av', 'pfp'])
+async def avatar(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    embed = discord.Embed(title=f"📸 {member.display_name}'s Avatar", color=discord.Color.purple())
+    if member.display_avatar: embed.set_image(url=member.display_avatar.url)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def banner(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    user = await bot.fetch_user(member.id)
+    if user.banner:
+        embed = discord.Embed(title=f"🌌 {member.display_name}'s Banner", color=discord.Color.purple())
+        embed.set_image(url=user.banner.url)
+        await ctx.send(embed=embed)
+    else: await ctx.send("❌ No custom banner!")
 
 keep_alive()  
 bot.run(os.getenv('DISCORD_TOKEN'))
