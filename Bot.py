@@ -59,21 +59,41 @@ async def gstart(interaction: discord.Interaction, duration: int, winners: int, 
     msg = await interaction.channel.send(f"🎉 **GIVEAWAY: {prize}**")
     await msg.add_reaction("🎉")
 
-@bot.hybrid_command(description="Play music")
+# Yahan apni ProxyScrape se copy ki hui IP aur Port dalein
+MY_PROXY = "http://YOUR_IP_HERE:PORT" 
+
+@bot.hybrid_command(description="Play music with Proxy")
 async def play(ctx, *, query: str):
     await ctx.defer()
-    if not ctx.author.voice: return await ctx.send("❌ Join VC first!")
+    if not ctx.author.voice: return await ctx.send("❌ Pehle VC join karo!")
+    
+    # Connection
     channel = ctx.author.voice.channel
     if ctx.voice_client is None: await channel.connect()
     else: await ctx.voice_client.move_to(channel)
-    
-    ydl_opts = {'format': 'bestaudio', 'quiet': True, 'noplaylist': True}
+
+    await ctx.send(f"🔍 Searching with Proxy: {query}...")
+
+    # YDL Options with Proxy
+    ydl_opts = {
+        'format': 'bestaudio',
+        'quiet': True,
+        'noplaylist': True,
+        'proxy': MY_PROXY, # Yahan Proxy active hai
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+    }
+
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(f"ytsearch:{query}", download=False)
-        song = info['entries'][0]
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(song['url'], executable=FFMPEG_PATH))
-        ctx.voice_client.play(source)
-        await ctx.send(f"▶️ Now Playing: **{song['title']}**")
+        try:
+            # Sirf YouTube Search use karenge (saavnsearch hata diya)
+            info = ydl.extract_info(f"ytsearch:{query}", download=False)
+            song = info['entries'][0]
+            
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(song['url'], executable=FFMPEG_PATH))
+            ctx.voice_client.play(source)
+            await ctx.send(f"▶️ Now Playing: **{song['title']}**")
+        except Exception as e:
+            await ctx.send(f"❌ Proxy Error: {e}. ProxyScrape se nayi IP check karo!")
 
 @bot.event
 async def on_ready():
