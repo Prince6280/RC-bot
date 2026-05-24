@@ -55,7 +55,7 @@ anti_nuke_state = {}
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user.name} - DJ & God Mode Online!")
+    print(f"Logged in as {bot.user.name} - Premium Dropdown UI Online!")
 
 # --- 🎛️ INTERACTIVE MUSIC BUTTONS ---
 class MusicControls(discord.ui.View):
@@ -100,31 +100,69 @@ class MusicControls(discord.ui.View):
             await interaction.response.send_message("🏟️ **Live Stadium Effect Ready!** (Will apply on next song)", ephemeral=True)
         else: await interaction.response.send_message("❌ **VIP Only!** Use `>claim premium ROADTO3K` first.", ephemeral=True)
 
-# --- 🌟 CUSTOM BLACK THEME HELP MENU ---
+
+# --- 🌟 PREMIUM DROPDOWN HELP MENU UI ---
+class HelpDropdown(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label='Music Commands', description='View all music and playback commands', emoji='🎵'),
+            discord.SelectOption(label='VIP Effects & Utility', description='Exclusive DJ filters and 24/7 mode', emoji='🎛️'),
+            discord.SelectOption(label='Security & Backup', description='Anti-Nuke, Anti-Raid, and Backups', emoji='🛡️'),
+            discord.SelectOption(label='Owner Only', description='God mode commands for the Boss', emoji='👑'),
+            discord.SelectOption(label='Profile & Extras', description='Avatars, Banners, and VIP Tickets', emoji='🖼️')
+        ]
+        super().__init__(placeholder='Choose a Category...', min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        embed = discord.Embed(color=discord.Color.from_rgb(30, 31, 34)) # Premium Dark Discord Color
+        
+        if self.values[0] == 'Music Commands':
+            embed.title = "🎵 Music Commands"
+            embed.description = "`>play [song/link]` - Play a track\n`>skip` - Skip current song\n`>stop` - Stop the music completely"
+        elif self.values[0] == 'VIP Effects & Utility':
+            embed.title = "🎛️ VIP Effects & Utility"
+            embed.description = "**DJ Filters:**\n`>live`, `>bass`, `>8d`, `>nightcore`, `>normal`\n`>volume [0-100]`\n\n**Bot Utility:**\n`>247 enable` / `>247 disable`"
+        elif self.values[0] == 'Security & Backup':
+            embed.title = "🛡️ Security & Backup"
+            embed.description = "**Automated Security:**\nAnti-Spam & Anti-Raid (Active 24/7)\n\n**Server Backups:**\n`>backup create` - Save layout\n`>backup load` - Restore layout\n\n**Moderation:**\n`>kick [@user]`, `>ban [@user]`"
+        elif self.values[0] == 'Owner Only':
+            embed.title = "👑 Owner Only Commands"
+            embed.description = "`>announce [message]` - Server announcement\n`>lockdown` / `>unlock` - Chat control\n`>anti nuke enable/disable` - Security switch\n`>whitelist [@user]` / `>unwhitelist [@user]`\n`>give vip [@user]` - Grant VIP"
+        elif self.values[0] == 'Profile & Extras':
+            embed.title = "🖼️ Profile & Extras"
+            embed.description = "`>ticket` - Generate VIP Pass\n`>avatar [@user]` - View avatar\n`>banner [@user]` - View banner\n`>claim premium` - Claim VIP"
+
+        embed.set_footer(text="Road To 3K Music Fest")
+        await interaction.response.edit_message(embed=embed)
+
+class HelpView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(HelpDropdown())
+
 @bot.command(name="help")
-async def custom_help(ctx):
-    embed = discord.Embed(color=discord.Color.from_rgb(0, 0, 0))
-    embed.title = f"Hey , I'm {bot.user.name} ™"
-    desc = (
-        "A multipurpose VIP bot to setup your dream community and the perfect music fest.\n\n"
-        f"• **Prefix:** `>`\n"
-        f"• **Total commands:** {len(bot.commands)}\n\n"
-        "🎵 » **Music Commands** (`>play`, `>skip`, `>stop`)\n"
-        "🎛️ » **VIP Effects** (`>live`, `>bass`, `>8d`, `>nightcore`, `>normal`)\n"
-        "🎟️ » **Extraordinary** (`>ticket`)\n"
-        "⏳ » **VIP Utility** (`>247 enable`, `>247 disable`)\n"
-        "🛡️ » **Security** (`Anti-Spam`, `Anti-Raid`)\n"
-        "⚙️ » **Moderation** (`>kick`, `>ban`)\n"
-        "👑 » **OWNER ONLY** (`>announce`, `>lockdown`, `>unlock`, `>give vip`, `>anti nuke`, `>whitelist`, `>unwhitelist`)\n"
-        "💾 » **Backup System** (`>backup create`, `>backup load`)\n"
-        "🖼️ » **Profile** (`>avatar`, `>banner`)\n"
-        "⭐ » **Premium** (`>claim premium`)\n"
+async def premium_help(ctx):
+    embed = discord.Embed(title=f"{bot.user.name} - Help Menu !", color=discord.Color.from_rgb(0, 0, 0))
+    
+    embed.description = (
+        f"Hey there! I'm **{bot.user.name}**, a premium music & security bot that delivers high-quality sound, prioritizes a clean experience, and protects your dream community.\n\n"
+        "**Supports:** 🟢 Spotify, 🎧 JioSaavn, ☁️ SoundCloud, 🍎 Apple Music\n"
+        f"🔗 **Prefix:** `{ctx.prefix}`\n\n"
+        "**Categories**\n"
+        "🎵 **Music Commands**\n"
+        "🎛️ **VIP Effects & Utility**\n"
+        "🛡️ **Security & Backup**\n"
+        "👑 **Owner Only**\n"
+        "🖼️ **Profile & Extras**\n"
     )
-    embed.description = desc
-    embed.add_field(name="__Pro Tip__", value="Use `>ticket` to generate your digital VIP Entry Pass! 🌟", inline=False)
+    
+    # 🌟 YOU CAN ADD A BANNER IMAGE URL HERE (Like Cassette Music image)
+    # embed.set_image(url="YOUR_BANNER_LINK_HERE") 
+    
     if bot.user.avatar: embed.set_thumbnail(url=bot.user.avatar.url)
-    embed.set_footer(text="Road To 3K Music Fest")
-    await ctx.send(embed=embed)
+    embed.set_footer(text="Road To 3K Music Fest", icon_url=ctx.author.display_avatar.url if ctx.author.display_avatar else None)
+    
+    await ctx.send(embed=embed, view=HelpView())
 
 # --- ⚙️ MODERATION COMMANDS (FIXED) ---
 @bot.command()
@@ -191,8 +229,6 @@ async def unwhitelist(ctx, member: discord.Member = None):
     else: await ctx.send(f"⚠️ User not in whitelist!")
 
 # --- SPACE COMMANDS (USING GROUPS) ---
-
-# 1. >give vip
 @bot.group(invoke_without_command=True)
 async def give(ctx): pass
 @give.command()
@@ -205,7 +241,6 @@ async def vip(ctx, member: discord.Member = None):
         await ctx.send(embed=embed)
     else: await ctx.send(f"⚠️ Already a VIP!")
 
-# 2. >anti nuke
 @bot.group(invoke_without_command=True)
 async def anti(ctx): pass
 @anti.command()
@@ -219,7 +254,6 @@ async def nuke(ctx, state: str = None):
         await ctx.send("⚠️ **Anti-Nuke DISABLED!**")
     else: await ctx.send("❌ Use `>anti nuke enable` or `>anti nuke disable`.")
 
-# 3. >backup create & load
 @bot.group(invoke_without_command=True)
 async def backup(ctx): pass
 @backup.command()
@@ -244,7 +278,6 @@ async def load(ctx):
         if cat["name"] not in existing_categories: await ctx.guild.create_category(cat["name"])
     await ctx.send("✅ Server Restored!")
 
-# 4. >claim premium
 @bot.group(invoke_without_command=True)
 async def claim(ctx): pass
 @claim.command()
@@ -330,13 +363,10 @@ async def play_next(ctx):
         if os.path.exists(file_name):
             try: os.remove(file_name)
             except: pass
-
         ydl_opts_dl = {'format': 'bestaudio/best', 'outtmpl': file_name, 'quiet': True}
         msg = await ctx.send(f"⏳ **Loading track...**")
-        
         def download_song():
             with yt_dlp.YoutubeDL(ydl_opts_dl) as ydl: ydl.extract_info(song['webpage_url'], download=True)
-                
         try:
             await asyncio.to_thread(download_song)
             def after_play(error):
@@ -344,19 +374,15 @@ async def play_next(ctx):
                 fut = asyncio.run_coroutine_threadsafe(coro, bot.loop)
                 try: fut.result()
                 except: pass
-
             audio_opts = get_audio_options(ctx.guild.id)
             source = discord.FFmpegPCMAudio(file_name, executable="./ffmpeg", **audio_opts)
             source = discord.PCMVolumeTransformer(source)
             ctx.voice_client.play(source, after=after_play)
-            
             embed = discord.Embed(title="▶️ Now Playing", description=f"**[{song['title']}]({song['webpage_url']})**", color=discord.Color.green())
             if song['thumbnail']: embed.set_thumbnail(url=song['thumbnail']) 
-            
             current_effect = active_effects.get(ctx.guild.id, "normal").upper()
             if current_effect != "NORMAL": embed.add_field(name="🎛️ Active Effect", value=f"**{current_effect}**", inline=False)
             embed.set_footer(text="Road To 3K Music Fest!")
-            
             await msg.delete()
             await ctx.send(embed=embed, view=MusicControls(ctx))
         except:
@@ -371,24 +397,19 @@ async def play(ctx, *, query: str = None):
     if ctx.voice_client is None:
         try: await ctx.author.voice.channel.connect(timeout=60.0)
         except: return await ctx.send("❌ Failed to connect.")
-
     await ctx.send("🔍 **Searching...**")
     ydl_opts_search = {'format': 'bestaudio', 'quiet': True, 'noplaylist': True}
-    
     def search_song():
         with yt_dlp.YoutubeDL(ydl_opts_search) as ydl:
             if query.startswith("http://") or query.startswith("https://"): return ydl.extract_info(query, download=False)
             else: return ydl.extract_info(f"scsearch:{query}", download=False)
-            
     try:
         info = await asyncio.to_thread(search_song)
         if 'entries' in info and len(info['entries']) > 0: info = info['entries'][0]
         elif not info: return await ctx.send("❌ Track not found.")
-            
         song_data = {'title': info.get('title', 'Unknown Title'), 'thumbnail': info.get('thumbnail', ''), 'webpage_url': info.get('webpage_url', info.get('url'))}
         if ctx.guild.id not in music_queues: music_queues[ctx.guild.id] = []
         music_queues[ctx.guild.id].append(song_data)
-        
         if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused(): await play_next(ctx)
         else:
             embed = discord.Embed(title="📝 Added to Queue", description=f"**{song_data['title']}**", color=discord.Color.blue())
