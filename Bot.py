@@ -8,9 +8,10 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=">", intents=intents, help_command=None)
 FFMPEG_PATH = "/usr/bin/ffmpeg"
 music_queues = {}
-PROXY_URL = "http://103.152.112.50:8080" # Yahan ProxyScrape ki latest IP dalen
+# ProxyScrape se 'HTTP' proxy lekar yahan dalein
+PROXY_URL = "http://103.152.112.50:8080" 
 
-# --- MUSIC ENGINE ---
+# --- MUSIC ENGINE (Queue + Proxy + No Route Fix) ---
 async def play_next(ctx):
     if ctx.guild.id in music_queues and len(music_queues[ctx.guild.id]) > 0:
         song = music_queues[ctx.guild.id].pop(0)
@@ -19,7 +20,7 @@ async def play_next(ctx):
         await ctx.send(f"▶️ Playing: **{song['title']}**")
     else: await ctx.send("🎶 Queue khatam!")
 
-@bot.hybrid_command(description="Play music with Proxy")
+@bot.hybrid_command(description="Play music")
 async def play(ctx, *, query: str):
     await ctx.defer()
     if not ctx.author.voice: return await ctx.send("❌ Join VC!")
@@ -28,7 +29,10 @@ async def play(ctx, *, query: str):
     
     if ctx.guild.id not in music_queues: music_queues[ctx.guild.id] = []
     
-    ydl_opts = {'format': 'bestaudio', 'quiet': True, 'noplaylist': True, 'proxy': PROXY_URL}
+    ydl_opts = {
+        'format': 'bestaudio/best', 'quiet': True, 'noplaylist': True,
+        'proxy': PROXY_URL, 'source_address': '0.0.0.0', 'nocheckcertificate': True
+    }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(f"ytsearch:{query}", download=False)
         song = info['entries'][0]
@@ -36,11 +40,11 @@ async def play(ctx, *, query: str):
         await ctx.send(f"📝 Added: **{song['title']}**")
         if not ctx.voice_client.is_playing(): await play_next(ctx)
 
-@bot.hybrid_command(description="Skip current song")
+@bot.hybrid_command(description="Skip song")
 async def skip(ctx):
     if ctx.voice_client: ctx.voice_client.stop(); await ctx.send("⏭️ Skipped!")
 
-# --- SECURITY & UTILS (Sabhi commands wapas aa gayi hain) ---
+# --- SECURITY & UTILS ---
 @bot.tree.command(name="antinuke")
 async def antinuke(interaction: discord.Interaction, state: str):
     await interaction.response.send_message(f"🛡️ Anti-Nuke: {state}")
@@ -84,7 +88,8 @@ async def help(ctx):
 @bot.event
 async def on_ready():
     await bot.tree.sync()
-    print("✅ Oliver fully loaded with ALL commands!")
+    print("✅ Oliver is fully operational!")
 
 keep_alive()
 bot.run(os.getenv('DISCORD_TOKEN'))
+
