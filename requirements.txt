@@ -4,3 +4,4 @@ yt-dlp
 asyncio
 Flask
 mini-racer
+ffmpeg
