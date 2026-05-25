@@ -1,19 +1,20 @@
-import discord, os, yt_dlp
+import discord, os, asyncio
 from discord.ext import commands
 from keep_alive import keep_alive
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=">", intents=intents, help_command=None)
 
-@bot.event
-async def on_ready():
-    await bot.tree.sync() # Slash commands sync
-    print(f"✅ {bot.user.name} is fresh and ready!")
+async def load_extensions():
+    # Cogs folder ke andar ki files load karega
+    for filename in os.listdir('./cogs'):
+        if filename.endswith('.py'):
+            await bot.load_extension(f'cogs.{filename[:-3]}')
 
-@bot.hybrid_command(name="ping", description="Check latency")
-async def ping(ctx):
-    await ctx.send(f"🏓 Pong! {round(bot.latency * 1000)}ms")
+async def main():
+    keep_alive()
+    async with bot:
+        await load_extensions()
+        await bot.start(os.getenv('DISCORD_TOKEN'))
 
-# यहाँ से हम एक-एक करके नई कमांड्स जोड़ेंगे
-keep_alive()
-bot.run(os.getenv('DISCORD_TOKEN'))
+asyncio.run(main())
