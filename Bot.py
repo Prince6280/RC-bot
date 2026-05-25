@@ -17,6 +17,7 @@ async def on_ready():
     await bot.tree.sync()
     print(f'बोट ऑनलाइन है: {bot.user}')
 
-# यहाँ आप अपने नए कमांड्स जोड़ सकते हैं
 
-bot.run('YOUR_BOT_TOKEN_HERE')
+keep_alive()
+bot.run(os.getenv('DISCORD_TOKEN'))
+
