@@ -31,4 +31,7 @@ async def antinuke(interaction: discord.Interaction, action: str):
         antinuke_status = False
         await interaction.response.send_message("❌ एंटी-न्यूक सिस्टम बंद कर दिया गया है।")
 
-bot.run('YOUR_BOT_TOKEN_HERE')
+
+
+keep_alive()
+bot.run(os.getenv('DISCORD_TOKEN'))
