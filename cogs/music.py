@@ -23,12 +23,19 @@ class Music(commands.Cog):
         self.queues = {}
         self.volumes = {}
 
-    def get_ydl_opts(self, bass=False):
-        return {
-            'format': 'bestaudio', 'default_search': 'scsearch', 'quiet': True,
-            'proxy': 'http://185.162.228.163:80', # अपनी WORKING प्रॉक्सी यहाँ डालें
-            'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}]
-        }
+    import requests, random
+
+# Free Proxy API से नई प्रॉक्सी लाने वाला फंक्शन
+def fetch_fresh_proxy():
+    try:
+        # यहाँ हम एक ऐसी API का यूज़ कर रहे हैं जो लाइव प्रॉक्सी देती है
+        response = requests.get("https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all")
+        if response.status_code == 200:
+            proxies = response.text.splitlines()
+            return f"http://{random.choice(proxies)}"
+    except:
+        return "http://185.162.228.163:80" # Fallback (अगर API डाउन हो)
+
 
     @commands.hybrid_command(name="play")
     async def play(self, ctx, *, query: str):
